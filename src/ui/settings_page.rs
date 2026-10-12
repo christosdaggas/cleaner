@@ -176,6 +176,27 @@ impl SettingsPage {
         autostart_row.set_activatable_widget(Some(&autostart_switch));
         group.add(&autostart_row);
 
+        let updates_row = adw::ActionRow::new();
+        updates_row.set_title("Check for Updates");
+        updates_row.set_subtitle("Ask GitHub for a newer release when Data Cleaner starts");
+
+        let updates_switch = gtk4::Switch::new();
+        updates_switch.set_active(settings.check_for_updates);
+        updates_switch.set_valign(gtk4::Align::Center);
+
+        let storage_clone = storage.clone();
+        updates_switch.connect_active_notify(move |sw| {
+            if let Err(e) = storage_clone.update_settings(|s| {
+                s.check_for_updates = sw.is_active();
+            }) {
+                tracing::warn!("Failed to update settings: {}", e);
+            }
+        });
+
+        updates_row.add_suffix(&updates_switch);
+        updates_row.set_activatable_widget(Some(&updates_switch));
+        group.add(&updates_row);
+
         group.upcast()
     }
 
@@ -247,6 +268,7 @@ impl SettingsPage {
 
                 if let Err(error) = storage_clone.update_settings(|current| {
                     current.set_scheduled_cleanup_days(selected);
+                    current.mark_schedule_changed();
                 }) {
                     schedule_row_clone.set_subtitle(&format!("Could not save schedule: {error}"));
                     return;
@@ -302,6 +324,7 @@ impl SettingsPage {
             time_row_clone.set_sensitive(enabled);
             if let Err(error) = storage_clone.update_settings(|current| {
                 current.scheduled_cleanup_enabled = enabled;
+                current.mark_schedule_changed();
             }) {
                 schedule_row_clone.set_subtitle(&format!("Could not save schedule: {error}"));
                 return;
@@ -314,6 +337,7 @@ impl SettingsPage {
         hour_spin.connect_value_changed(move |spin| {
             if let Err(error) = storage_clone.update_settings(|current| {
                 current.scheduled_cleanup_hour = spin.value() as u8;
+                current.mark_schedule_changed();
             }) {
                 schedule_row_clone.set_subtitle(&format!("Could not save schedule: {error}"));
                 return;
@@ -326,6 +350,7 @@ impl SettingsPage {
         minute_spin.connect_value_changed(move |spin| {
             if let Err(error) = storage_clone.update_settings(|current| {
                 current.scheduled_cleanup_minute = spin.value() as u8;
+                current.mark_schedule_changed();
             }) {
                 schedule_row_clone.set_subtitle(&format!("Could not save schedule: {error}"));
                 return;

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Duration, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +18,11 @@ pub struct AppSettings {
     pub scheduled_cleanup_hour: u8,
     #[serde(default)]
     pub scheduled_cleanup_minute: u8,
+    /// When the last scheduled cleanup started, or when the schedule was
+    /// last changed. A slot that passed after this instant is still due, so
+    /// cleanups missed while the computer was off or asleep run later.
+    #[serde(default)]
+    pub last_scheduled_cleanup: Option<DateTime<Utc>>,
     #[serde(default)]
     pub application_log_cleanup_enabled: bool,
     #[serde(default)]
@@ -32,6 +37,8 @@ pub struct AppSettings {
     pub color_scheme: ColorScheme,
     #[serde(default)]
     pub language: AppLanguage,
+    #[serde(default = "default_check_for_updates")]
+    pub check_for_updates: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -168,6 +175,48 @@ impl AppSettings {
         self.scheduled_cleanup_days = Some(selected);
     }
 
+    /// Restart the catch-up window after the schedule is enabled or edited,
+    /// so a change never triggers a cleanup for a slot that already passed.
+    pub fn mark_schedule_changed(&mut self) {
+        self.last_scheduled_cleanup = Some(Utc::now());
+    }
+
+    /// The most recent scheduled slot at or before `now`, in `now`'s time
+    /// zone. Days whose local time does not exist, such as a daylight saving
+    /// gap, are skipped.
+    pub fn latest_scheduled_slot<Tz: TimeZone>(&self, now: &DateTime<Tz>) -> Option<DateTime<Tz>> {
+        let today = now.date_naive();
+        (0..=7).find_map(|days_back| {
+            let date = today - Duration::days(days_back);
+            if !self.scheduled_cleanup_matches(date.weekday()) {
+                return None;
+            }
+            let local = date.and_hms_opt(
+                u32::from(self.scheduled_cleanup_hour),
+                u32::from(self.scheduled_cleanup_minute),
+                0,
+            )?;
+            now.timezone()
+                .from_local_datetime(&local)
+                .earliest()
+                .filter(|slot| slot <= now)
+        })
+    }
+
+    /// Whether a scheduled cleanup is due: the schedule is on and a slot has
+    /// passed since the last run. Several missed slots still mean one run.
+    pub fn scheduled_cleanup_due<Tz: TimeZone>(&self, now: &DateTime<Tz>) -> bool {
+        if !self.scheduled_cleanup_enabled {
+            return false;
+        }
+        let (Some(last_run), Some(slot)) =
+            (self.last_scheduled_cleanup, self.latest_scheduled_slot(now))
+        else {
+            return false;
+        };
+        slot.with_timezone(&Utc) > last_run
+    }
+
     pub fn scheduled_cleanup_matches(&self, weekday: chrono::Weekday) -> bool {
         self.effective_scheduled_cleanup_days()
             .iter()
@@ -200,6 +249,7 @@ impl Default for AppSettings {
             scheduled_cleanup_days: Some(ScheduleDay::weekdays().to_vec()),
             scheduled_cleanup_hour: default_scheduled_cleanup_hour(),
             scheduled_cleanup_minute: 0,
+            last_scheduled_cleanup: None,
             application_log_cleanup_enabled: false,
             system_journal_cleanup_enabled: false,
             log_retention_days: default_log_retention_days(),
@@ -209,6 +259,7 @@ impl Default for AppSettings {
             verbose_logging: false,
             color_scheme: ColorScheme::System,
             language: AppLanguage::Automatic,
+            check_for_updates: default_check_for_updates(),
         }
     }
 }
@@ -219,6 +270,10 @@ const fn default_scheduled_cleanup_hour() -> u8 {
 
 const fn default_log_retention_days() -> u32 {
     30
+}
+
+const fn default_check_for_updates() -> bool {
+    true
 }
 
 #[cfg(test)]
@@ -274,6 +329,8 @@ mod tests {
         object.remove("system_journal_cleanup_enabled");
         object.remove("log_retention_days");
         object.remove("language");
+        object.remove("last_scheduled_cleanup");
+        object.remove("check_for_updates");
 
         let settings: AppSettings = serde_json::from_value(value).unwrap();
         assert!(!settings.scheduled_cleanup_enabled);
@@ -288,6 +345,88 @@ mod tests {
         assert!(!settings.system_journal_cleanup_enabled);
         assert_eq!(settings.log_retention_days, 30);
         assert_eq!(settings.language, AppLanguage::Automatic);
+        assert_eq!(settings.last_scheduled_cleanup, None);
+        assert!(settings.check_for_updates);
+    }
+
+    fn at(day: u32, hour: u32, minute: u32) -> DateTime<Utc> {
+        // October 2026: the 12th is a Monday.
+        Utc.with_ymd_and_hms(2026, 10, day, hour, minute, 0)
+            .unwrap()
+    }
+
+    fn daily_at_three() -> AppSettings {
+        AppSettings {
+            scheduled_cleanup_enabled: true,
+            scheduled_cleanup_hour: 3,
+            scheduled_cleanup_minute: 0,
+            ..AppSettings::default()
+        }
+    }
+
+    #[test]
+    fn a_missed_slot_is_caught_up_later() {
+        let mut settings = daily_at_three();
+        settings.last_scheduled_cleanup = Some(at(12, 3, 0));
+
+        // Asleep at 03:00 on Tuesday, opened at 09:00.
+        assert!(settings.scheduled_cleanup_due(&at(13, 9, 0)));
+    }
+
+    #[test]
+    fn a_slot_that_already_ran_is_not_repeated() {
+        let mut settings = daily_at_three();
+        settings.last_scheduled_cleanup = Some(at(13, 3, 0) + Duration::seconds(20));
+
+        assert!(!settings.scheduled_cleanup_due(&at(13, 3, 1)));
+        assert!(!settings.scheduled_cleanup_due(&at(13, 23, 59)));
+        assert!(settings.scheduled_cleanup_due(&at(14, 3, 0)));
+    }
+
+    #[test]
+    fn several_missed_slots_mean_one_due_run() {
+        let mut settings = daily_at_three();
+        settings.last_scheduled_cleanup = Some(at(5, 3, 0));
+
+        let now = at(13, 9, 0);
+        assert_eq!(settings.latest_scheduled_slot(&now), Some(at(13, 3, 0)));
+        assert!(settings.scheduled_cleanup_due(&now));
+    }
+
+    #[test]
+    fn weekly_schedule_finds_last_weeks_slot() {
+        let mut settings = daily_at_three();
+        settings.set_scheduled_cleanup_days(vec![ScheduleDay::Wednesday]);
+
+        // Sunday the 18th: the latest Wednesday slot is the 14th.
+        let now = at(18, 12, 0);
+        assert_eq!(now.weekday(), chrono::Weekday::Sun);
+        assert_eq!(settings.latest_scheduled_slot(&now), Some(at(14, 3, 0)));
+
+        settings.last_scheduled_cleanup = Some(at(14, 3, 0));
+        assert!(!settings.scheduled_cleanup_due(&now));
+        settings.last_scheduled_cleanup = Some(at(7, 3, 0));
+        assert!(settings.scheduled_cleanup_due(&now));
+    }
+
+    #[test]
+    fn nothing_is_due_without_a_baseline_or_when_disabled() {
+        let mut settings = daily_at_three();
+        assert!(!settings.scheduled_cleanup_due(&at(13, 9, 0)));
+
+        settings.last_scheduled_cleanup = Some(at(1, 0, 0));
+        settings.scheduled_cleanup_enabled = false;
+        assert!(!settings.scheduled_cleanup_due(&at(13, 9, 0)));
+    }
+
+    #[test]
+    fn changing_the_schedule_restarts_the_catch_up_window() {
+        let mut settings = daily_at_three();
+        settings.last_scheduled_cleanup = Some(at(1, 0, 0));
+        settings.mark_schedule_changed();
+
+        let now = Utc::now();
+        assert!(!settings.scheduled_cleanup_due(&now));
     }
 
     #[test]

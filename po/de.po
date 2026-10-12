@@ -400,6 +400,13 @@ msgstr "Eine Sprache wählen oder automatisch der Systemsprache folgen"
 msgid "Choose your preferred theme"
 msgstr "Bevorzugtes Erscheinungsbild wählen"
 
+#. Update check setting
+msgid "Check for Updates"
+msgstr "Nach Updates suchen"
+
+msgid "Ask GitHub for a newer release when Data Cleaner starts"
+msgstr "Beim Start von Data Cleaner auf GitHub nach einer neueren Version suchen"
+
 #. Scheduler and log-cleanup settings
 msgid "Start Data Cleaner at Login"
 msgstr "Data Cleaner bei der Anmeldung starten"

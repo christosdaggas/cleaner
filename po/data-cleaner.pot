@@ -388,6 +388,13 @@ msgstr ""
 msgid "Choose your preferred theme"
 msgstr ""
 
+#. Update check setting
+msgid "Check for Updates"
+msgstr ""
+
+msgid "Ask GitHub for a newer release when Data Cleaner starts"
+msgstr ""
+
 #. Scheduler and log-cleanup settings
 msgid "Start Data Cleaner at Login"
 msgstr ""

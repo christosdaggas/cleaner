@@ -293,8 +293,9 @@ impl MainWindow {
         self.toggle_sidebar();
         crate::i18n::translate_widget_tree(&main_box);
 
-        // Check GitHub once when the window is created. The request runs in
-        // the background and only changes the footer when an update exists.
+        // Check GitHub once when the window is created, unless the user
+        // turned it off. The request runs in the background and only changes
+        // the footer when an update exists.
         self.check_for_updates();
     }
 
@@ -928,6 +929,16 @@ impl MainWindow {
 
     /// Run the one-time GitHub release check in the background.
     fn check_for_updates(&self) {
+        let enabled = self
+            .imp()
+            .storage
+            .borrow()
+            .as_ref()
+            .is_some_and(|storage| storage.get_settings().check_for_updates);
+        if !enabled {
+            tracing::debug!("Update check is turned off in settings");
+            return;
+        }
         if self.imp().update_check_started.replace(true) {
             return;
         }

@@ -400,6 +400,13 @@ msgstr "Επιλέξτε γλώσσα ή ακολουθήστε αυτόματα
 msgid "Choose your preferred theme"
 msgstr "Επιλέξτε το θέμα που προτιμάτε"
 
+#. Update check setting
+msgid "Check for Updates"
+msgstr "Έλεγχος για ενημερώσεις"
+
+msgid "Ask GitHub for a newer release when Data Cleaner starts"
+msgstr "Ερώτηση στο GitHub για νεότερη έκδοση κατά την εκκίνηση του Data Cleaner"
+
 #. Scheduler and log-cleanup settings
 msgid "Start Data Cleaner at Login"
 msgstr "Εκκίνηση του Data Cleaner κατά τη σύνδεση"

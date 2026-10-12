@@ -221,6 +221,29 @@ mod tests {
     }
 
     #[test]
+    fn every_interface_language_translates_the_whole_template() {
+        // Template entries have empty translations, which the parser drops,
+        // so give each one a placeholder to collect the message IDs.
+        let template =
+            include_str!("../po/data-cleaner.pot").replace("msgstr \"\"", "msgstr \"x\"");
+        let ids: Vec<String> = parse_po(&template).into_keys().collect();
+        assert!(ids.len() > 100, "template parsed suspiciously few entries");
+
+        let catalogs = [
+            ("el", &*GREEK),
+            ("it", &*ITALIAN),
+            ("es", &*SPANISH),
+            ("de", &*GERMAN),
+            ("fr", &*FRENCH),
+        ];
+        for (language, catalog) in catalogs {
+            let missing: Vec<&String> =
+                ids.iter().filter(|id| !catalog.contains_key(*id)).collect();
+            assert!(missing.is_empty(), "{language} is missing {missing:?}");
+        }
+    }
+
+    #[test]
     fn po_parser_reads_single_and_multiline_values() {
         let catalog = parse_po("msgid \"Hello\"\nmsgstr \"Bonjour\"\n\nmsgid \"Long \"\n\"text\"\nmsgstr \"Texte \"\n\"long\"\n");
         assert_eq!(catalog.get("Hello").map(String::as_str), Some("Bonjour"));

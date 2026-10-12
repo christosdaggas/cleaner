@@ -1,7 +1,7 @@
 use crate::storage::Storage;
 use crate::theme;
 use crate::ui::MainWindow;
-use chrono::{Datelike, Local, Timelike};
+use chrono::{Local, Utc};
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
 use gtk4::{gdk, gio, glib};
@@ -22,7 +22,6 @@ mod imp {
         pub tray_hint_shown: Cell<bool>,
         pub tray_available: Cell<bool>,
         pub start_hidden: Cell<bool>,
-        pub last_scheduled_cleanup_slot: RefCell<Option<String>>,
     }
 
     #[glib::object_subclass]
@@ -250,26 +249,20 @@ impl DataCleanerApplication {
             return;
         }
 
-        let now = Local::now();
-        if !settings.scheduled_cleanup_matches(now.weekday())
-            || settings.scheduled_cleanup_hour != now.hour() as u8
-            || settings.scheduled_cleanup_minute != now.minute() as u8
-        {
+        // Settings saved before catch-up existed have no baseline. Start
+        // counting from now so upgrading never triggers an immediate run.
+        if settings.last_scheduled_cleanup.is_none() {
+            if let Err(error) = storage.update_settings(|current| current.mark_schedule_changed()) {
+                tracing::warn!("Could not save the cleanup schedule baseline: {error}");
+            }
             return;
         }
 
-        let slot = format!(
-            "{:04}-{:02}-{:02} {:02}:{:02}",
-            now.year(),
-            now.month(),
-            now.day(),
-            now.hour(),
-            now.minute()
-        );
-        if self.imp().last_scheduled_cleanup_slot.borrow().as_deref() == Some(slot.as_str()) {
+        if !settings.scheduled_cleanup_due(&Local::now()) {
             return;
         }
 
+        // A busy window refuses the request; the next tick retries.
         let started = self
             .imp()
             .window
@@ -278,8 +271,12 @@ impl DataCleanerApplication {
             .map(MainWindow::request_scheduled_clean)
             .unwrap_or(false);
         if started {
-            tracing::info!(schedule_slot = %slot, "Starting scheduled cleanup");
-            self.imp().last_scheduled_cleanup_slot.replace(Some(slot));
+            tracing::info!("Starting scheduled cleanup");
+            if let Err(error) = storage.update_settings(|current| {
+                current.last_scheduled_cleanup = Some(Utc::now());
+            }) {
+                tracing::warn!("Could not record the scheduled cleanup time: {error}");
+            }
         }
     }
 
