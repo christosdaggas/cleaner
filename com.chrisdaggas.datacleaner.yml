@@ -1,4 +1,4 @@
-# Cleaner Cosmic - Flatpak Manifest
+# Data Cleaner - Flatpak Manifest
 # Build with: flatpak-builder --user --install --force-clean build-dir com.chrisdaggas.datacleaner.yml
 # Runtime: GNOME 47
 

@@ -6,11 +6,11 @@ Data Cleaner is a native Linux application for safely reclaiming disk space. Bui
 
 ## Features
 
-- Clean supported browser caches and data, with unavailable browsers clearly disabled.
+- Clean supported browser caches and data, including Flatpak and Snap browsers, with unavailable browsers clearly disabled.
 - Remove application caches, temporary files, thumbnails, trash, and custom directories.
 - Analyze storage visually and find large files or folders.
 - Clean application logs using a configurable retention period.
-- Schedule automatic cleanup on selected days and times.
+- Schedule automatic cleanup on selected days and times. A cleanup missed while the computer was off or asleep runs the next time Data Cleaner is open.
 - Start Data Cleaner automatically at login for scheduled tasks.
 - Review detailed results after every cleanup, including deleted, skipped, and failed items.
 - Integrate with the system tray and follow the current GNOME color scheme and accent color.
@@ -79,9 +79,12 @@ Contributions, bug reports, and feature suggestions are welcome.
 3. Run the checks before submitting:
 
    ```bash
+   cargo fmt --check
    cargo test --locked
    cargo clippy --all-targets --locked -- -D warnings
    ```
+
+   The same checks run in CI on every push and pull request.
 
 4. Open a pull request with a clear description of the change.
 

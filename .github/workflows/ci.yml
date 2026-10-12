@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, test, and validate metadata
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev libadwaita-1-dev pkg-config \
+            desktop-file-utils appstream gettext
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Run tests
+        run: cargo test --locked
+
+      - name: Validate desktop entry
+        run: desktop-file-validate data/com.chrisdaggas.datacleaner.desktop
+
+      - name: Validate AppStream metadata
+        run: appstreamcli validate --no-net data/com.chrisdaggas.datacleaner.metainfo.xml
+
+      - name: Validate translations
+        run: for po in po/*.po; do msgfmt --check -o /dev/null "$po"; done

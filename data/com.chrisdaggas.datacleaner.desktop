@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Data Cleaner
 Comment=Safely clean browser data, application caches, and temporary files
-Exec=data-cleaner %U
+Exec=data-cleaner
 Icon=com.chrisdaggas.datacleaner
 Terminal=false
 Type=Application

@@ -6,7 +6,7 @@
   <summary>Safely clean browser data, caches, and temporary files</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>GPL-3.0-or-later</project_license>
+  <project_license>MIT</project_license>
 
   <developer id="com.chrisdaggas">
     <name>Christos A. Daggas</name>
@@ -26,7 +26,7 @@
     </p>
     <p>Features:</p>
     <ul>
-      <li>Browser cleanup: Clear cache, history, and cookies from Firefox, Chrome, Chromium, Brave, and Edge</li>
+      <li>Browser cleanup: Clear cache, history, and cookies from Firefox, Chrome, Chromium, Brave, Edge, and more, including Flatpak and Snap installs</li>
       <li>Application caches: Clean caches from package managers and applications</li>
       <li>Custom directories: Add your own cleanup rules with file patterns and age filters</li>
       <li>System cleanup: Clear temporary files, thumbnails, and trash</li>
@@ -54,15 +54,7 @@
   <screenshots>
     <screenshot type="default">
       <caption>The main dashboard showing reclaimable space</caption>
-      <image>https://chrisdaggas.com/cleaner/screenshots/dashboard.png</image>
-    </screenshot>
-    <screenshot>
-      <caption>Browser cleanup options</caption>
-      <image>https://chrisdaggas.com/cleaner/screenshots/browsers.png</image>
-    </screenshot>
-    <screenshot>
-      <caption>Custom directory rules</caption>
-      <image>https://chrisdaggas.com/cleaner/screenshots/custom.png</image>
+      <image>https://raw.githubusercontent.com/christosdaggas/Cleaner/main/app.png</image>
     </screenshot>
   </screenshots>
 
