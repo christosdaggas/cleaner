@@ -12,8 +12,8 @@
 //! - XDG portal availability
 //! - Protected paths summary
 
-use crate::services::{DesktopEnvironment, DisplayServer, IconDiagnostics, IconResolver};
 use crate::i18n::{tr, tr_args};
+use crate::services::{DesktopEnvironment, DisplayServer, IconDiagnostics, IconResolver};
 use crate::theme::ThemeSnapshot;
 use gtk4 as gtk;
 use gtk4::glib;
@@ -167,7 +167,8 @@ impl DiagnosticsPage {
 
         // Wayland display
         if is_wayland {
-            let wayland_display = std::env::var("WAYLAND_DISPLAY").unwrap_or_else(|_| tr("Not set"));
+            let wayland_display =
+                std::env::var("WAYLAND_DISPLAY").unwrap_or_else(|_| tr("Not set"));
             let wayland_row = adw::ActionRow::builder()
                 .title("WAYLAND_DISPLAY")
                 .subtitle(&wayland_display)
@@ -205,8 +206,7 @@ impl DiagnosticsPage {
         let theme = ThemeSnapshot::from_widget(self);
 
         // Get current icon theme
-        let icon_theme = IconResolver::get_current_theme_name()
-            .unwrap_or_else(|| tr("Unknown"));
+        let icon_theme = IconResolver::get_current_theme_name().unwrap_or_else(|| tr("Unknown"));
         let icon_theme_row = adw::ActionRow::builder()
             .title(tr("Icon Theme"))
             .subtitle(&icon_theme)
@@ -244,14 +244,22 @@ impl DiagnosticsPage {
         // High contrast
         let hc_row = adw::ActionRow::builder()
             .title(tr("High Contrast"))
-            .subtitle(if theme.is_high_contrast { tr("Enabled") } else { tr("Disabled") })
+            .subtitle(if theme.is_high_contrast {
+                tr("Enabled")
+            } else {
+                tr("Disabled")
+            })
             .build();
         hc_row.add_prefix(&self.create_status_icon(true));
         group.add(&hc_row);
 
         let motion_row = adw::ActionRow::builder()
             .title(tr("Reduced Motion"))
-            .subtitle(if theme.reduced_motion { tr("Enabled") } else { tr("Disabled") })
+            .subtitle(if theme.reduced_motion {
+                tr("Enabled")
+            } else {
+                tr("Disabled")
+            })
             .build();
         motion_row.add_prefix(&self.create_status_icon(true));
         group.add(&motion_row);
@@ -311,7 +319,9 @@ impl DiagnosticsPage {
     fn create_portals_section(&self) -> adw::PreferencesGroup {
         let group = adw::PreferencesGroup::new();
         group.set_title(&tr("XDG Portals"));
-        group.set_description(Some(&tr("Desktop portal availability for sandboxed access")));
+        group.set_description(Some(&tr(
+            "Desktop portal availability for sandboxed access",
+        )));
 
         // Check if running in Flatpak
         let in_flatpak = std::path::Path::new("/.flatpak-info").exists();
@@ -328,7 +338,13 @@ impl DiagnosticsPage {
 
         // Portal backend (from env)
         let portal_backend = std::env::var("GTK_USE_PORTAL")
-            .map(|v| if v == "1" { tr("Enabled") } else { tr("Disabled") })
+            .map(|v| {
+                if v == "1" {
+                    tr("Enabled")
+                } else {
+                    tr("Disabled")
+                }
+            })
             .unwrap_or_else(|_| tr("Default"));
         let portal_row = adw::ActionRow::builder()
             .title(tr("GTK Portal Usage"))
@@ -339,8 +355,8 @@ impl DiagnosticsPage {
         // XDG_DATA_DIRS for portal lookup
         let data_dirs = std::env::var("XDG_DATA_DIRS")
             .unwrap_or_else(|_| "/usr/share:/usr/local/share".to_string());
-        let has_portal_data = data_dirs.contains("flatpak") ||
-            std::path::Path::new("/usr/share/xdg-desktop-portal").exists();
+        let has_portal_data = data_dirs.contains("flatpak")
+            || std::path::Path::new("/usr/share/xdg-desktop-portal").exists();
 
         let portal_installed_row = adw::ActionRow::builder()
             .title(tr("Portal Service"))

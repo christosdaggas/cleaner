@@ -4,7 +4,7 @@ use crate::ui::MainWindow;
 use chrono::{Datelike, Local, Timelike};
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
-use gtk4::{gio, glib, gdk};
+use gtk4::{gdk, gio, glib};
 use libadwaita as adw;
 use libadwaita::prelude::*;
 use libadwaita::subclass::prelude::*;
@@ -111,7 +111,11 @@ mod imp {
                     if let Some(exe_dir) = exe_path.parent() {
                         let dev_icons = exe_dir.join("../../data/icons");
                         if dev_icons.exists() {
-                            if let Some(path_str) = dev_icons.canonicalize().ok().and_then(|p| p.to_str().map(String::from)) {
+                            if let Some(path_str) = dev_icons
+                                .canonicalize()
+                                .ok()
+                                .and_then(|p| p.to_str().map(String::from))
+                            {
                                 icon_theme.add_search_path(&path_str);
                             }
                         }
@@ -262,13 +266,7 @@ impl DataCleanerApplication {
             now.hour(),
             now.minute()
         );
-        if self
-            .imp()
-            .last_scheduled_cleanup_slot
-            .borrow()
-            .as_deref()
-            == Some(slot.as_str())
-        {
+        if self.imp().last_scheduled_cleanup_slot.borrow().as_deref() == Some(slot.as_str()) {
             return;
         }
 
@@ -281,9 +279,7 @@ impl DataCleanerApplication {
             .unwrap_or(false);
         if started {
             tracing::info!(schedule_slot = %slot, "Starting scheduled cleanup");
-            self.imp()
-                .last_scheduled_cleanup_slot
-                .replace(Some(slot));
+            self.imp().last_scheduled_cleanup_slot.replace(Some(slot));
         }
     }
 
@@ -445,7 +441,9 @@ impl DataCleanerApplication {
         if gio::resources_lookup_data(
             "/com/chrisdaggas/datacleaner/style.css",
             gio::ResourceLookupFlags::NONE,
-        ).is_ok() {
+        )
+        .is_ok()
+        {
             provider.load_from_resource("/com/chrisdaggas/datacleaner/style.css");
         } else {
             provider.load_from_data(include_str!("../data/style.css"));

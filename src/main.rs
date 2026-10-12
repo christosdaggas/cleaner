@@ -1,10 +1,10 @@
 mod application;
 mod autostart;
 mod i18n;
-mod storage;
 mod models;
 mod release_notes;
 mod services;
+mod storage;
 mod theme;
 mod tray;
 mod ui;

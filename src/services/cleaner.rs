@@ -156,7 +156,13 @@ impl Cleaner {
 
         if let Err(reason) = self.validate_operation(scan_result) {
             result.blocked(reason);
-            warn!("{}", result.blocked_reason.as_deref().unwrap_or("Cleanup blocked"));
+            warn!(
+                "{}",
+                result
+                    .blocked_reason
+                    .as_deref()
+                    .unwrap_or("Cleanup blocked")
+            );
             return result;
         }
 
@@ -253,13 +259,18 @@ impl Cleaner {
     fn delete_file(&self, path: &Path, _expected_size: u64) -> Result<u64, CleanError> {
         let audit = self.security.audit_for_deletion(path);
         if !audit.is_safe {
-            let violation = audit.violations.into_iter().next()
+            let violation = audit
+                .violations
+                .into_iter()
+                .next()
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "Unknown security violation".to_string());
             return Err(CleanError::SecurityViolation(violation));
         }
 
-        let metadata = self.security.verify_before_deletion(path)
+        let metadata = self
+            .security
+            .verify_before_deletion(path)
             .map_err(|e| CleanError::SecurityViolation(e.to_string()))?;
 
         let actual_size = metadata.len();
@@ -278,16 +289,21 @@ impl Cleaner {
     fn delete_directory(&self, path: &Path) -> Result<(), CleanError> {
         let audit = self.security.audit_for_deletion(path);
         if !audit.is_safe {
-            let violation = audit.violations.into_iter().next()
+            let violation = audit
+                .violations
+                .into_iter()
+                .next()
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "Unknown security violation".to_string());
             return Err(CleanError::SecurityViolation(violation));
         }
 
-        self.security.verify_before_deletion(path)
+        self.security
+            .verify_before_deletion(path)
             .map_err(|e| CleanError::SecurityViolation(e.to_string()))?;
 
-        let is_empty = path.read_dir()
+        let is_empty = path
+            .read_dir()
             .map(|mut d| d.next().is_none())
             .unwrap_or(false);
 
@@ -390,8 +406,18 @@ mod tests {
         });
 
         let mut scan = ScanResult::new();
-        scan.add_file(FileEntry::new(dir.path().join("test1.txt"), 14, false, false));
-        scan.add_file(FileEntry::new(dir.path().join("test2.log"), 21, false, false));
+        scan.add_file(FileEntry::new(
+            dir.path().join("test1.txt"),
+            14,
+            false,
+            false,
+        ));
+        scan.add_file(FileEntry::new(
+            dir.path().join("test2.log"),
+            21,
+            false,
+            false,
+        ));
 
         let result = cleaner.clean(&scan);
         assert!(result.is_blocked());

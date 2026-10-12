@@ -116,9 +116,13 @@ impl IconResolver {
     fn get_fallbacks(icon_name: &str) -> Vec<&'static str> {
         match icon_name {
             // Browser icons
-            "firefox" | "firefox-esr" => vec!["firefox-symbolic", "web-browser", "web-browser-symbolic"],
+            "firefox" | "firefox-esr" => {
+                vec!["firefox-symbolic", "web-browser", "web-browser-symbolic"]
+            }
             "google-chrome" | "chrome" => vec!["google-chrome-symbolic", "chromium", "web-browser"],
-            "chromium" | "chromium-browser" => vec!["chromium-symbolic", "google-chrome", "web-browser"],
+            "chromium" | "chromium-browser" => {
+                vec!["chromium-symbolic", "google-chrome", "web-browser"]
+            }
             "brave" | "brave-browser" => vec!["brave-symbolic", "web-browser"],
             "microsoft-edge" => vec!["microsoft-edge-symbolic", "web-browser"],
             "opera" => vec!["opera-symbolic", "web-browser"],
@@ -134,7 +138,9 @@ impl IconResolver {
             "folder-documents-symbolic" => vec!["folder-documents", "folder"],
 
             // Security icons
-            "security-high-symbolic" => vec!["security-high", "dialog-password", "system-lock-screen"],
+            "security-high-symbolic" => {
+                vec!["security-high", "dialog-password", "system-lock-screen"]
+            }
             "security-medium-symbolic" => vec!["security-medium", "dialog-warning"],
             "security-low-symbolic" => vec!["security-low", "dialog-error"],
 
@@ -155,14 +161,38 @@ impl IconResolver {
 
     fn get_bundled_resource(icon_name: &str) -> Option<String> {
         let browser_icons = [
-            ("firefox", "/com/chrisdaggas/datacleaner/icons/browsers/firefox.svg"),
-            ("google-chrome", "/com/chrisdaggas/datacleaner/icons/browsers/chrome.svg"),
-            ("chromium", "/com/chrisdaggas/datacleaner/icons/browsers/chromium.svg"),
-            ("brave", "/com/chrisdaggas/datacleaner/icons/browsers/brave.svg"),
-            ("microsoft-edge", "/com/chrisdaggas/datacleaner/icons/browsers/edge.svg"),
-            ("opera", "/com/chrisdaggas/datacleaner/icons/browsers/opera.svg"),
-            ("vivaldi", "/com/chrisdaggas/datacleaner/icons/browsers/vivaldi.svg"),
-            ("yandex-browser", "/com/chrisdaggas/datacleaner/icons/browsers/yandex.svg"),
+            (
+                "firefox",
+                "/com/chrisdaggas/datacleaner/icons/browsers/firefox.svg",
+            ),
+            (
+                "google-chrome",
+                "/com/chrisdaggas/datacleaner/icons/browsers/chrome.svg",
+            ),
+            (
+                "chromium",
+                "/com/chrisdaggas/datacleaner/icons/browsers/chromium.svg",
+            ),
+            (
+                "brave",
+                "/com/chrisdaggas/datacleaner/icons/browsers/brave.svg",
+            ),
+            (
+                "microsoft-edge",
+                "/com/chrisdaggas/datacleaner/icons/browsers/edge.svg",
+            ),
+            (
+                "opera",
+                "/com/chrisdaggas/datacleaner/icons/browsers/opera.svg",
+            ),
+            (
+                "vivaldi",
+                "/com/chrisdaggas/datacleaner/icons/browsers/vivaldi.svg",
+            ),
+            (
+                "yandex-browser",
+                "/com/chrisdaggas/datacleaner/icons/browsers/yandex.svg",
+            ),
         ];
 
         for (name, path) in browser_icons {
@@ -186,10 +216,26 @@ impl IconResolver {
 
     pub fn get_diagnostics_summary(&self) -> IconDiagnostics {
         let total = self.resolutions.len();
-        let theme_resolved = self.resolutions.iter().filter(|r| r.resolution_type == ResolutionType::ThemeIcon).count();
-        let fallback_used = self.resolutions.iter().filter(|r| r.resolution_type == ResolutionType::FallbackIcon).count();
-        let bundled_used = self.resolutions.iter().filter(|r| r.resolution_type == ResolutionType::BundledResource).count();
-        let generic_used = self.resolutions.iter().filter(|r| r.resolution_type == ResolutionType::GenericFallback).count();
+        let theme_resolved = self
+            .resolutions
+            .iter()
+            .filter(|r| r.resolution_type == ResolutionType::ThemeIcon)
+            .count();
+        let fallback_used = self
+            .resolutions
+            .iter()
+            .filter(|r| r.resolution_type == ResolutionType::FallbackIcon)
+            .count();
+        let bundled_used = self
+            .resolutions
+            .iter()
+            .filter(|r| r.resolution_type == ResolutionType::BundledResource)
+            .count();
+        let generic_used = self
+            .resolutions
+            .iter()
+            .filter(|r| r.resolution_type == ResolutionType::GenericFallback)
+            .count();
 
         IconDiagnostics {
             total_resolutions: total,
@@ -259,16 +305,36 @@ impl DesktopEnvironment {
         if let Ok(desktop) = std::env::var("XDG_CURRENT_DESKTOP") {
             let desktop_lower = desktop.to_lowercase();
 
-            if desktop_lower.contains("gnome") { return Self::Gnome; }
-            if desktop_lower.contains("kde") || desktop_lower.contains("plasma") { return Self::Kde; }
-            if desktop_lower.contains("cosmic") { return Self::Cosmic; }
-            if desktop_lower.contains("xfce") { return Self::Xfce; }
-            if desktop_lower.contains("cinnamon") { return Self::Cinnamon; }
-            if desktop_lower.contains("mate") { return Self::Mate; }
-            if desktop_lower.contains("budgie") { return Self::Budgie; }
-            if desktop_lower.contains("pantheon") { return Self::Pantheon; }
-            if desktop_lower.contains("lxqt") { return Self::Lxqt; }
-            if desktop_lower.contains("lxde") { return Self::Lxde; }
+            if desktop_lower.contains("gnome") {
+                return Self::Gnome;
+            }
+            if desktop_lower.contains("kde") || desktop_lower.contains("plasma") {
+                return Self::Kde;
+            }
+            if desktop_lower.contains("cosmic") {
+                return Self::Cosmic;
+            }
+            if desktop_lower.contains("xfce") {
+                return Self::Xfce;
+            }
+            if desktop_lower.contains("cinnamon") {
+                return Self::Cinnamon;
+            }
+            if desktop_lower.contains("mate") {
+                return Self::Mate;
+            }
+            if desktop_lower.contains("budgie") {
+                return Self::Budgie;
+            }
+            if desktop_lower.contains("pantheon") {
+                return Self::Pantheon;
+            }
+            if desktop_lower.contains("lxqt") {
+                return Self::Lxqt;
+            }
+            if desktop_lower.contains("lxde") {
+                return Self::Lxde;
+            }
 
             return Self::Unknown(desktop);
         }
@@ -276,9 +342,15 @@ impl DesktopEnvironment {
         if let Ok(session) = std::env::var("DESKTOP_SESSION") {
             let session_lower = session.to_lowercase();
 
-            if session_lower.contains("gnome") { return Self::Gnome; }
-            if session_lower.contains("plasma") || session_lower.contains("kde") { return Self::Kde; }
-            if session_lower.contains("cosmic") { return Self::Cosmic; }
+            if session_lower.contains("gnome") {
+                return Self::Gnome;
+            }
+            if session_lower.contains("plasma") || session_lower.contains("kde") {
+                return Self::Kde;
+            }
+            if session_lower.contains("cosmic") {
+                return Self::Cosmic;
+            }
 
             return Self::Unknown(session);
         }

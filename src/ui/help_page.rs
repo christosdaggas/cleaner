@@ -4,11 +4,11 @@
 
 //! Help Page - Application documentation and guidance.
 
-use gtk4 as gtk;
-use gtk4::prelude::*;
-use gtk4::glib;
-use gtk4::subclass::prelude::*;
 use crate::i18n::tr;
+use gtk4 as gtk;
+use gtk4::glib;
+use gtk4::prelude::*;
+use gtk4::subclass::prelude::*;
 
 mod imp {
     use super::*;
@@ -116,7 +116,7 @@ impl HelpPage {
              • Cookies and site data\n\
              • Download history\n\
              • Browsing history\n\n\
-             Be careful with cookies if you want to stay logged into websites."
+             Be careful with cookies if you want to stay logged into websites.",
         ));
 
         // Applications section
@@ -126,7 +126,7 @@ impl HelpPage {
              Many applications store cached data that can be safely removed to free space. \
              The cleaner identifies application-specific cache directories and shows how much \
              space each application is using. Select which applications to clean and preserve \
-             those you want to keep cached for performance."
+             those you want to keep cached for performance.",
         ));
 
         // Custom Directories section
@@ -138,7 +138,7 @@ impl HelpPage {
              • Temporary work directories\n\
              • Log directories\n\n\
              Configure patterns to match specific file types or exclude certain files \
-             from cleaning. Custom directories are scanned during system scans."
+             from cleaning. Custom directories are scanned during system scans.",
         ));
 
         // Storage Analyzer section
@@ -148,7 +148,7 @@ impl HelpPage {
              The treemap gives you a visual size comparison, while the list lets you browse \
              and select individual items. Selected items are moved to the system Trash after \
              confirmation, so they can be restored if needed. Storage Analyzer runs only when \
-             you start it and is never included in Dashboard or scheduled cleanup."
+             you start it and is never included in Dashboard or scheduled cleanup.",
         ));
 
         // System section
@@ -160,7 +160,7 @@ impl HelpPage {
              • Thumbnail cache\n\
              • Old log files\n\
              • Crash reports\n\n\
-             Some operations may require elevated privileges and will prompt for authentication."
+             Some operations may require elevated privileges and will prompt for authentication.",
         ));
 
         // Settings section
@@ -169,7 +169,7 @@ impl HelpPage {
             "Configure how Cleaner operates. Set default cleaning options, configure \
              which categories to include in quick scans, manage custom directory rules, \
              and set up scheduled cleaning. You can also configure safety options \
-             like file age thresholds and exclusion patterns."
+             like file age thresholds and exclusion patterns.",
         ));
 
         // Tips section
@@ -180,7 +180,7 @@ impl HelpPage {
              • Package manager caches can be useful for offline reinstalls.\n\
              • Add development build directories as custom locations to save space.\n\
              • System temporary files older than a week are usually safe to remove.\n\
-             • Run a scan before cleaning to see exactly what will be removed."
+             • Run a scan before cleaning to see exactly what will be removed.",
         ));
 
         scroll.set_child(Some(&content_box));

@@ -136,7 +136,9 @@ impl BrowsersPage {
 
         // Find rules for this browser
         for data_type in BrowserDataType::all() {
-            let rule = rules.iter().find(|r| r.browser == browser && r.data_type == *data_type);
+            let rule = rules
+                .iter()
+                .find(|r| r.browser == browser && r.data_type == *data_type);
             let is_enabled = rule.map(|r| r.enabled).unwrap_or(false);
 
             let row = adw::ActionRow::new();
@@ -158,7 +160,10 @@ impl BrowsersPage {
             switch.connect_active_notify(move |sw| {
                 let enabled = sw.is_active();
                 if let Err(e) = storage_clone.update_browser_rules(|rules| {
-                    if let Some(rule) = rules.iter_mut().find(|r| r.browser == browser_type && r.data_type == dt) {
+                    if let Some(rule) = rules
+                        .iter_mut()
+                        .find(|r| r.browser == browser_type && r.data_type == dt)
+                    {
                         rule.enabled = enabled;
                     } else {
                         let mut rule = BrowserRule::new(browser_type, dt);

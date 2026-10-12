@@ -1,8 +1,8 @@
 use crate::models::AppRule;
 use crate::storage::Storage;
+use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
-use gtk4::glib;
 use libadwaita as adw;
 use libadwaita::prelude::*;
 use std::cell::RefCell;

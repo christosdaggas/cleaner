@@ -350,7 +350,9 @@ mod tests {
     /// with zero entries and nothing is logged.
     #[test]
     fn svg_root_element_stays_within_the_format_sniffing_window() {
-        let offset = TRAY_SVG.find("<svg").expect("symbolic icon has a root element");
+        let offset = TRAY_SVG
+            .find("<svg")
+            .expect("symbolic icon has a root element");
         assert!(
             offset < 256,
             "`<svg` starts at byte {offset}; keep comments inside the root element"

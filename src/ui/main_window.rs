@@ -249,7 +249,9 @@ impl MainWindow {
 
         // Store references
         self.imp().sidebar_box.replace(Some(sidebar_box));
-        self.imp().content_stack.replace(Some(content_stack.clone()));
+        self.imp()
+            .content_stack
+            .replace(Some(content_stack.clone()));
         self.imp().dashboard_page.replace(Some(dashboard_page));
         self.imp().cleanup_log_page.replace(Some(cleanup_log_page));
         self.imp()
@@ -371,7 +373,9 @@ impl MainWindow {
         sidebar_box.append(&scrolled);
 
         // Store references for collapse/expand
-        self.imp().sidebar_toggle_btn.replace(Some(sidebar_toggle_btn));
+        self.imp()
+            .sidebar_toggle_btn
+            .replace(Some(sidebar_toggle_btn));
         self.imp().sidebar_title.replace(Some(sidebar_title));
         self.imp().nav_labels.replace(nav_labels);
         self.imp().nav_boxes.replace(nav_boxes);
@@ -400,9 +404,8 @@ impl MainWindow {
         update_label.add_css_class("error");
         update_inner.append(&update_label);
 
-        let update_button = gtk4::LinkButton::new(
-            "https://github.com/christosdaggas/Cleaner/releases/latest",
-        );
+        let update_button =
+            gtk4::LinkButton::new("https://github.com/christosdaggas/Cleaner/releases/latest");
         update_button.set_child(Some(&update_inner));
         update_button.add_css_class("flat");
         update_button.add_css_class("update-indicator");
@@ -744,9 +747,12 @@ impl MainWindow {
             dark_btn: &gtk4::ToggleButton,
         ) {
             let style_manager = adw::StyleManager::default();
-            let (default_selected, light_selected, dark_selected) = match style_manager.color_scheme()
+            let (default_selected, light_selected, dark_selected) = match style_manager
+                .color_scheme()
             {
-                adw::ColorScheme::ForceLight | adw::ColorScheme::PreferLight => (false, true, false),
+                adw::ColorScheme::ForceLight | adw::ColorScheme::PreferLight => {
+                    (false, true, false)
+                }
                 adw::ColorScheme::ForceDark | adw::ColorScheme::PreferDark => (false, false, true),
                 _ => (true, false, false),
             };
@@ -754,7 +760,10 @@ impl MainWindow {
             default_btn.set_active(default_selected);
             light_btn.set_active(light_selected);
             dark_btn.set_active(dark_selected);
-            default_btn.set_child(Some(&create_theme_content("theme-default", default_selected)));
+            default_btn.set_child(Some(&create_theme_content(
+                "theme-default",
+                default_selected,
+            )));
             light_btn.set_child(Some(&create_theme_content("theme-light", light_selected)));
             dark_btn.set_child(Some(&create_theme_content("theme-dark", dark_selected)));
         }

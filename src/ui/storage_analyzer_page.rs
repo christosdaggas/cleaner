@@ -1,8 +1,8 @@
+use crate::i18n::{tr, tr_args, translate_widget_tree};
 use crate::services::{
     analyze_storage, move_to_trash, StorageAnalysis, StorageAnalysisError, StorageNode,
     StorageScanOptions, TrashTarget,
 };
-use crate::i18n::{tr, tr_args, translate_widget_tree};
 use crate::theme::{self, ThemeSnapshot};
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
@@ -819,18 +819,13 @@ impl StorageAnalyzerPage {
             } else if count == 1 {
                 tr("1 item selected")
             } else {
-                tr_args(
-                    "{count} items selected",
-                    &[("{count}", &count.to_string())],
-                )
+                tr_args("{count} items selected", &[("{count}", &count.to_string())])
             };
             label.set_text(&text);
         }
         if let Some(label) = self.imp().selected_size_label.borrow().as_ref() {
             let text = if count == 0 {
-                tr(
-                    "Select files or folders to review before moving them to Trash",
-                )
+                tr("Select files or folders to review before moving them to Trash")
             } else {
                 tr_args(
                     "{size} will be reviewed before moving",
@@ -1116,7 +1111,10 @@ impl StorageAnalyzerPage {
                         "{item_word}",
                         &if moved == 1 { tr("item") } else { tr("items") },
                     ),
-                    ("{size}", &bytesize::ByteSize(result.bytes_moved()).to_string()),
+                    (
+                        "{size}",
+                        &bytesize::ByteSize(result.bytes_moved()).to_string(),
+                    ),
                     ("{failed}", &failed.to_string()),
                     ("{details}", &failure_details),
                 ],
@@ -1177,11 +1175,7 @@ impl StorageAnalyzerPage {
         let window = self
             .root()
             .and_then(|root| root.downcast::<gtk4::Window>().ok());
-        let dialog = adw::MessageDialog::new(
-            window.as_ref(),
-            Some(&tr(title)),
-            Some(&tr(message)),
-        );
+        let dialog = adw::MessageDialog::new(window.as_ref(), Some(&tr(title)), Some(&tr(message)));
         dialog.add_response("ok", "OK");
         dialog.set_default_response(Some("ok"));
         translate_widget_tree(&dialog);

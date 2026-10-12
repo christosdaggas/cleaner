@@ -112,7 +112,7 @@ impl Storage {
                     Self::migrate_legacy_config(&PathBuf::from(".cleaner"), &current);
                     current
                 }
-            }
+            },
         };
 
         if !config_dir.exists() {
@@ -227,10 +227,7 @@ impl Storage {
         let parsed: T = match serde_json::from_str(&data) {
             Ok(parsed) => parsed,
             Err(source) => {
-                let backup = path.with_extension(format!(
-                    "json.corrupt-{}",
-                    uuid::Uuid::new_v4()
-                ));
+                let backup = path.with_extension(format!("json.corrupt-{}", uuid::Uuid::new_v4()));
                 match fs::copy(path, &backup) {
                     Ok(_) => warn!(
                         "Preserved unreadable configuration {} as {}",
@@ -288,10 +285,7 @@ impl Storage {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("config.json");
-        let temporary_path = parent.join(format!(
-            ".{file_name}.{}.tmp",
-            uuid::Uuid::new_v4()
-        ));
+        let temporary_path = parent.join(format!(".{file_name}.{}.tmp", uuid::Uuid::new_v4()));
 
         let write_result = (|| -> std::io::Result<()> {
             let mut file = fs::OpenOptions::new()
@@ -376,7 +370,8 @@ impl Storage {
     }
 
     pub fn get_settings(&self) -> AppSettings {
-        let mut settings = self.get_clone(&self.settings, "settings")
+        let mut settings = self
+            .get_clone(&self.settings, "settings")
             .unwrap_or_else(|e| {
                 error!("Failed to read settings: {}", e);
                 AppSettings::default()
@@ -415,9 +410,12 @@ impl Storage {
         let mut changed = false;
 
         {
-            let mut rules = self.browser_rules.write().map_err(|_| StorageError::LockPoisoned {
-                context: "browser_rules".to_string(),
-            })?;
+            let mut rules = self
+                .browser_rules
+                .write()
+                .map_err(|_| StorageError::LockPoisoned {
+                    context: "browser_rules".to_string(),
+                })?;
 
             for rule in rules.iter_mut() {
                 if rule.enabled && !installed.contains(&rule.browser) {
@@ -428,8 +426,7 @@ impl Storage {
 
             for default_rule in defaults {
                 let exists = rules.iter().any(|rule| {
-                    rule.browser == default_rule.browser
-                        && rule.data_type == default_rule.data_type
+                    rule.browser == default_rule.browser && rule.data_type == default_rule.data_type
                 });
                 if !exists {
                     rules.push(default_rule);
@@ -638,10 +635,9 @@ mod tests {
             .unwrap()
             .filter_map(Result::ok)
             .collect();
-        assert!(entries.iter().all(|entry| !entry
-            .file_name()
-            .to_string_lossy()
-            .ends_with(".tmp")));
+        assert!(entries
+            .iter()
+            .all(|entry| !entry.file_name().to_string_lossy().ends_with(".tmp")));
     }
 
     #[test]

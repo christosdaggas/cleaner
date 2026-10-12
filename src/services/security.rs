@@ -19,10 +19,17 @@ pub enum SecurityError {
     EmptyPath,
 
     #[error("Symlink escape detected: {original} resolves to {resolved}")]
-    SymlinkEscape { original: PathBuf, resolved: PathBuf },
+    SymlinkEscape {
+        original: PathBuf,
+        resolved: PathBuf,
+    },
 
     #[error("Path depth too shallow (depth {depth}, minimum {min}): {path}")]
-    PathTooShallow { path: PathBuf, depth: usize, min: usize },
+    PathTooShallow {
+        path: PathBuf,
+        depth: usize,
+        min: usize,
+    },
 
     #[error("Path not owned by current user: {0}")]
     NotOwned(PathBuf),
@@ -95,10 +102,37 @@ impl SecurityAuditor {
 
         // Hard denylist
         let hard_deny = [
-            "/", "/bin", "/sbin", "/usr", "/usr/bin", "/usr/sbin", "/usr/lib", "/usr/lib64",
-            "/usr/lib32", "/usr/libexec", "/usr/share", "/usr/local", "/lib", "/lib64",
-            "/lib32", "/etc", "/boot", "/dev", "/proc", "/sys", "/run", "/var", "/var/lib",
-            "/var/log", "/var/run", "/root", "/home", "/opt", "/srv", "/mnt", "/media",
+            "/",
+            "/bin",
+            "/sbin",
+            "/usr",
+            "/usr/bin",
+            "/usr/sbin",
+            "/usr/lib",
+            "/usr/lib64",
+            "/usr/lib32",
+            "/usr/libexec",
+            "/usr/share",
+            "/usr/local",
+            "/lib",
+            "/lib64",
+            "/lib32",
+            "/etc",
+            "/boot",
+            "/dev",
+            "/proc",
+            "/sys",
+            "/run",
+            "/var",
+            "/var/lib",
+            "/var/log",
+            "/var/run",
+            "/root",
+            "/home",
+            "/opt",
+            "/srv",
+            "/mnt",
+            "/media",
         ];
         for path in hard_deny {
             auditor.hard_denylist.insert(PathBuf::from(path));
@@ -107,11 +141,21 @@ impl SecurityAuditor {
 
         // Prefix denylist
         auditor.prefix_denylist = vec![
-            PathBuf::from("/usr"), PathBuf::from("/lib"), PathBuf::from("/bin"),
-            PathBuf::from("/sbin"), PathBuf::from("/etc"), PathBuf::from("/boot"),
-            PathBuf::from("/dev"), PathBuf::from("/proc"), PathBuf::from("/sys"),
-            PathBuf::from("/run"), PathBuf::from("/var"), PathBuf::from("/root"),
-            PathBuf::from("/opt"), PathBuf::from("/srv"), PathBuf::from("/mnt"),
+            PathBuf::from("/usr"),
+            PathBuf::from("/lib"),
+            PathBuf::from("/bin"),
+            PathBuf::from("/sbin"),
+            PathBuf::from("/etc"),
+            PathBuf::from("/boot"),
+            PathBuf::from("/dev"),
+            PathBuf::from("/proc"),
+            PathBuf::from("/sys"),
+            PathBuf::from("/run"),
+            PathBuf::from("/var"),
+            PathBuf::from("/root"),
+            PathBuf::from("/opt"),
+            PathBuf::from("/srv"),
+            PathBuf::from("/mnt"),
             PathBuf::from("/media"),
         ];
 
@@ -129,9 +173,25 @@ impl SecurityAuditor {
 
         // Protected home paths
         let protected = [
-            ".ssh", ".gnupg", ".gpg", ".pki", ".password-store", ".local/share/keyrings",
-            "Documents", "Pictures", "Videos", "Music", "Downloads", "Desktop", "Templates",
-            "Public", ".bashrc", ".bash_profile", ".profile", ".zshrc", ".config/autostart",
+            ".ssh",
+            ".gnupg",
+            ".gpg",
+            ".pki",
+            ".password-store",
+            ".local/share/keyrings",
+            "Documents",
+            "Pictures",
+            "Videos",
+            "Music",
+            "Downloads",
+            "Desktop",
+            "Templates",
+            "Public",
+            ".bashrc",
+            ".bash_profile",
+            ".profile",
+            ".zshrc",
+            ".config/autostart",
             ".config/systemd",
         ];
         for path in protected {
@@ -140,9 +200,23 @@ impl SecurityAuditor {
 
         // Protected cache directories
         let protected_caches = [
-            "gtk-4.0", "gtk-3.0", "icon-cache", "icons", "gnome-shell", "gnome-software",
-            "gnome-settings-daemon", "fontconfig", "mesa_shader_cache", "radv_builtin_shaders",
-            "gstreamer-1.0", "evolution", "ibus", "session", "tracker3", "folks", "samba",
+            "gtk-4.0",
+            "gtk-3.0",
+            "icon-cache",
+            "icons",
+            "gnome-shell",
+            "gnome-software",
+            "gnome-settings-daemon",
+            "fontconfig",
+            "mesa_shader_cache",
+            "radv_builtin_shaders",
+            "gstreamer-1.0",
+            "evolution",
+            "ibus",
+            "session",
+            "tracker3",
+            "folks",
+            "samba",
         ];
         for cache_name in protected_caches {
             auditor.protected_cache_paths.insert(cache.join(cache_name));
@@ -150,11 +224,21 @@ impl SecurityAuditor {
 
         // Protected local share directories
         let protected_local_share = [
-            "icons", "gnome-shell", "gnome-settings-daemon", "gnome-software", "keyrings",
-            "fonts", "mime", "applications", "gvfs-metadata", "recently-used.xbel",
+            "icons",
+            "gnome-shell",
+            "gnome-settings-daemon",
+            "gnome-software",
+            "keyrings",
+            "fonts",
+            "mime",
+            "applications",
+            "gvfs-metadata",
+            "recently-used.xbel",
         ];
         for dir_name in protected_local_share {
-            auditor.protected_cache_paths.insert(data_local.join(dir_name));
+            auditor
+                .protected_cache_paths
+                .insert(data_local.join(dir_name));
         }
 
         auditor
@@ -188,10 +272,7 @@ impl SecurityAuditor {
         }
 
         for prefix in &self.prefix_denylist {
-            if path.starts_with(prefix)
-                && path != prefix
-                && !self.is_in_allowed_base(path)
-            {
+            if path.starts_with(prefix) && path != prefix && !self.is_in_allowed_base(path) {
                 return AuditResult::unsafe_path(
                     path.to_path_buf(),
                     SecurityError::ProtectedPath(path.to_path_buf()),
@@ -247,10 +328,9 @@ impl SecurityAuditor {
         let mut result = AuditResult::safe(canonical);
 
         if path.is_symlink() {
-            result.warnings.push(format!(
-                "Path is a symlink: {}",
-                path.display()
-            ));
+            result
+                .warnings
+                .push(format!("Path is a symlink: {}", path.display()));
         }
 
         result
@@ -306,8 +386,8 @@ impl SecurityAuditor {
             return Ok(());
         }
 
-        let metadata = fs::symlink_metadata(path)
-            .map_err(|_| SecurityError::NotOwned(path.to_path_buf()))?;
+        let metadata =
+            fs::symlink_metadata(path).map_err(|_| SecurityError::NotOwned(path.to_path_buf()))?;
 
         // /tmp files may be owned by any user but we should only delete our own
         if metadata.uid() != self.current_uid {
@@ -424,7 +504,6 @@ impl SecurityAuditor {
         // Root is always a mount point
         path == Path::new("/")
     }
-
 }
 
 impl Default for SecurityAuditor {
@@ -442,15 +521,7 @@ mod tests {
         let auditor = SecurityAuditor::new();
 
         // These should all be rejected
-        let denied = [
-            "/",
-            "/usr",
-            "/bin",
-            "/etc",
-            "/boot",
-            "/lib",
-            "/var",
-        ];
+        let denied = ["/", "/usr", "/bin", "/etc", "/boot", "/lib", "/var"];
 
         for path in denied {
             let result = auditor.audit(Path::new(path));
@@ -506,9 +577,11 @@ mod tests {
                 // Should not be rejected for security reasons
                 // (might fail ownership check on real system)
                 assert!(
-                    result.is_safe || result.violations.iter().any(|v| {
-                        matches!(v, SecurityError::CanonicalizationFailed(_))
-                    }),
+                    result.is_safe
+                        || result
+                            .violations
+                            .iter()
+                            .any(|v| { matches!(v, SecurityError::CanonicalizationFailed(_)) }),
                     "Cache path should be allowed or fail gracefully"
                 );
             }
@@ -577,8 +650,13 @@ mod tests {
             for path in &safe_paths {
                 let result = auditor.audit(path);
                 assert!(
-                    result.is_safe || result.violations.iter().any(|v| matches!(v, SecurityError::CanonicalizationFailed(_))),
-                    "Path should be allowed or fail gracefully: {}", path.display()
+                    result.is_safe
+                        || result
+                            .violations
+                            .iter()
+                            .any(|v| matches!(v, SecurityError::CanonicalizationFailed(_))),
+                    "Path should be allowed or fail gracefully: {}",
+                    path.display()
                 );
             }
         }
@@ -588,8 +666,13 @@ mod tests {
         for path in &safe_system_paths {
             let result = auditor.audit(Path::new(path));
             assert!(
-                result.is_safe || result.violations.iter().any(|v| matches!(v, SecurityError::CanonicalizationFailed(_))),
-                "Path should be allowed or fail gracefully: {}", path
+                result.is_safe
+                    || result
+                        .violations
+                        .iter()
+                        .any(|v| matches!(v, SecurityError::CanonicalizationFailed(_))),
+                "Path should be allowed or fail gracefully: {}",
+                path
             );
         }
     }

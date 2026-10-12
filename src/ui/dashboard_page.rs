@@ -2,9 +2,9 @@ use crate::models::ScanResult;
 use crate::services::{vacuum_system_journal, CleanOptions, Cleaner, ScanOptions, Scanner};
 use crate::storage::Storage;
 use crate::theme::{self, ThemeSnapshot};
+use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
-use gtk4::glib;
 use libadwaita as adw;
 use libadwaita::prelude::*;
 use std::cell::{Cell, RefCell};
@@ -78,7 +78,9 @@ impl DashboardPage {
             .build();
 
         page.imp().storage.replace(Some(storage));
-        page.imp().operation_running.replace(Some(Arc::new(AtomicBool::new(false))));
+        page.imp()
+            .operation_running
+            .replace(Some(Arc::new(AtomicBool::new(false))));
         page.setup_ui();
         page.refresh();
         page
@@ -736,7 +738,9 @@ impl DashboardPage {
                 page.cancel_operation(button);
             }
         });
-        self.imp().cancel_button.replace(Some(cancel_button.clone()));
+        self.imp()
+            .cancel_button
+            .replace(Some(cancel_button.clone()));
 
         buttons_box.append(&view_log_button);
         buttons_box.append(&cancel_button);
@@ -744,7 +748,7 @@ impl DashboardPage {
         buttons_box.append(&clean_button);
 
         inner.append(&info_box);
-       inner.append(&buttons_box);
+        inner.append(&buttons_box);
 
         card.set_child(Some(&inner));
         section.append(&card);
@@ -859,7 +863,10 @@ impl DashboardPage {
             .is_err()
         {
             if !automatic {
-                self.show_info_dialog("Operation in Progress", "A scan or cleanup is already running. Please wait for it to complete.");
+                self.show_info_dialog(
+                    "Operation in Progress",
+                    "A scan or cleanup is already running. Please wait for it to complete.",
+                );
             }
             return false;
         }
@@ -914,29 +921,29 @@ impl DashboardPage {
                     page.imp().reclaimable_bytes.replace(0);
                     page.imp().has_scanned.replace(false);
                 } else {
-                // Update the label with formatted size
-                if let Some(label) = page.imp().space_label.borrow().as_ref() {
-                    label.set_text(&result.formatted_size());
-                }
-
-                // Update donut chart
-                page.imp().reclaimable_bytes.replace(result.total_size);
-                page.imp().has_scanned.replace(true);
-                page.refresh_disk_usage();
-
-                let has_items = !result.is_empty();
-                page.imp().scan_result.replace(Some(result));
-
-                // Enable the Clean button so the user can act on the results
-                // they just saw. The previous code only set sensitivity at
-                // construction time, so the button stayed disabled even when
-                // a scan succeeded.
-                if has_items {
-                    if let Some(button) = page.imp().clean_button.borrow().as_ref() {
-                        button.set_sensitive(true);
+                    // Update the label with formatted size
+                    if let Some(label) = page.imp().space_label.borrow().as_ref() {
+                        label.set_text(&result.formatted_size());
                     }
-                }
-                continue_to_clean = clean_after_scan;
+
+                    // Update donut chart
+                    page.imp().reclaimable_bytes.replace(result.total_size);
+                    page.imp().has_scanned.replace(true);
+                    page.refresh_disk_usage();
+
+                    let has_items = !result.is_empty();
+                    page.imp().scan_result.replace(Some(result));
+
+                    // Enable the Clean button so the user can act on the results
+                    // they just saw. The previous code only set sensitivity at
+                    // construction time, so the button stayed disabled even when
+                    // a scan succeeded.
+                    if has_items {
+                        if let Some(button) = page.imp().clean_button.borrow().as_ref() {
+                            button.set_sensitive(true);
+                        }
+                    }
+                    continue_to_clean = clean_after_scan;
                 }
             }
             page.imp().operation_cancel.replace(None);
@@ -998,7 +1005,10 @@ impl DashboardPage {
         let scan_result = scan_result.unwrap();
 
         if scan_result.is_empty() && !settings.system_journal_cleanup_enabled {
-            self.show_info_dialog("Nothing to Clean", "No files were found to clean with the current settings.");
+            self.show_info_dialog(
+                "Nothing to Clean",
+                "No files were found to clean with the current settings.",
+            );
             return;
         }
 
@@ -1026,13 +1036,7 @@ impl DashboardPage {
     }
 
     fn show_confirmation_dialog(&self, scan_result: &ScanResult) {
-        let settings = self
-            .imp()
-            .storage
-            .borrow()
-            .as_ref()
-            .unwrap()
-            .get_settings();
+        let settings = self.imp().storage.borrow().as_ref().unwrap().get_settings();
         let journal_notice = if settings.system_journal_cleanup_enabled {
             crate::i18n::tr_args(
                 "\nThe archived system journal older than {days} days will also be vacuumed with administrator approval.",
@@ -1092,7 +1096,10 @@ impl DashboardPage {
             .is_err()
         {
             if interactive {
-                self.show_info_dialog("Operation in Progress", "A scan or cleanup is already running. Please wait for it to complete.");
+                self.show_info_dialog(
+                    "Operation in Progress",
+                    "A scan or cleanup is already running. Please wait for it to complete.",
+                );
             }
             return;
         }
@@ -1194,9 +1201,7 @@ impl DashboardPage {
                 };
                 let total_failures = result.failed_count() + usize::from(journal_failed);
 
-                if interactive
-                    && (show_summary || total_failures > 0 || result.cancelled)
-                {
+                if interactive && (show_summary || total_failures > 0 || result.cancelled) {
                     page.show_cleanup_result_dialog(
                         if result.cancelled {
                             "Cleanup Cancelled"

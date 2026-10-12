@@ -186,7 +186,10 @@ impl CleanupLogPage {
                 "{mode} cleanup · {time}",
                 &[
                     ("{mode}", &mode),
-                    ("{time}", &completed_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+                    (
+                        "{time}",
+                        &completed_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                    ),
                 ],
             ));
         }
@@ -213,11 +216,7 @@ impl CleanupLogPage {
             "{}",
             tr_args("Completed: {time}", &[("{time}", &completed)])
         );
-        let _ = writeln!(
-            log,
-            "{}",
-            tr_args("Mode: {mode}", &[("{mode}", &mode)])
-        );
+        let _ = writeln!(log, "{}", tr_args("Mode: {mode}", &[("{mode}", &mode)]));
         let _ = writeln!(
             log,
             "{}",
@@ -244,7 +243,10 @@ impl CleanupLogPage {
             "{}",
             tr_args(
                 "Deleted folders: {count}",
-                &[("{count}", &clean_result.deleted_directories.len().to_string())],
+                &[(
+                    "{count}",
+                    &clean_result.deleted_directories.len().to_string()
+                )],
             )
         );
         let _ = writeln!(
@@ -345,31 +347,17 @@ impl CleanupLogPage {
                 let _ = writeln!(
                     log,
                     "{}",
-                    tr(
-                        "  [SKIPPED] Scheduled cleanup cannot request administrator approval",
-                    )
+                    tr("  [SKIPPED] Scheduled cleanup cannot request administrator approval",)
                 );
             }
             None if system_journal_enabled && clean_result.cancelled => {
-                let _ = writeln!(
-                    log,
-                    "{}",
-                    tr("  [SKIPPED] Cleanup was cancelled")
-                );
+                let _ = writeln!(log, "{}", tr("  [SKIPPED] Cleanup was cancelled"));
             }
             None if system_journal_enabled && clean_result.blocked_reason.is_some() => {
-                let _ = writeln!(
-                    log,
-                    "{}",
-                    tr("  [SKIPPED] Cleanup was blocked")
-                );
+                let _ = writeln!(log, "{}", tr("  [SKIPPED] Cleanup was blocked"));
             }
             None if system_journal_enabled => {
-                let _ = writeln!(
-                    log,
-                    "{}",
-                    tr("  [NOT RUN] No journal result was returned")
-                );
+                let _ = writeln!(log, "{}", tr("  [NOT RUN] No journal result was returned"));
             }
             None => {
                 let _ = writeln!(

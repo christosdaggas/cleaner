@@ -1,9 +1,9 @@
 use crate::models::{CustomRule, DeletionMode};
 use crate::services::SecurityAuditor;
 use crate::storage::Storage;
+use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
-use gtk4::glib;
 use libadwaita as adw;
 use libadwaita::prelude::*;
 use std::cell::RefCell;
@@ -573,7 +573,11 @@ impl CustomPage {
         let heading = if matches.is_empty() {
             "No Matches Yet".to_string()
         } else {
-            format!("Found {} Match{}", matches.len(), if matches.len() == 1 { "" } else { "es" })
+            format!(
+                "Found {} Match{}",
+                matches.len(),
+                if matches.len() == 1 { "" } else { "es" }
+            )
         };
         let body = if matches.is_empty() {
             format!(
@@ -605,8 +609,10 @@ impl CustomPage {
             content.append(&row_label);
         }
         if matches.len() > PREVIEW_LIMIT {
-            let more_label =
-                gtk4::Label::new(Some(&format!("\u{2026}and {} more", matches.len() - PREVIEW_LIMIT)));
+            let more_label = gtk4::Label::new(Some(&format!(
+                "\u{2026}and {} more",
+                matches.len() - PREVIEW_LIMIT
+            )));
             more_label.add_css_class("dim-label");
             more_label.add_css_class("caption");
             more_label.set_halign(gtk4::Align::Start);

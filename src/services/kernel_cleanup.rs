@@ -72,7 +72,11 @@ impl KernelPlan {
         }
         let mut lines = Vec::new();
         for kernel in &self.removable {
-            lines.push(format!("• {} ({} packages)", kernel.version, kernel.packages.len()));
+            lines.push(format!(
+                "• {} ({} packages)",
+                kernel.version,
+                kernel.packages.len()
+            ));
         }
         let kept: Vec<String> = self
             .retained
@@ -313,7 +317,13 @@ pub fn build_plan(keep: u32) -> Result<KernelPlan, String> {
         KernelManager::Apt => {
             let out = run_query(
                 "dpkg-query",
-                &["-W", "-f=${Package}\\t${Status}\\n", "linux-image-*", "linux-modules-*", "linux-headers-*"],
+                &[
+                    "-W",
+                    "-f=${Package}\\t${Status}\\n",
+                    "linux-image-*",
+                    "linux-modules-*",
+                    "linux-headers-*",
+                ],
             )?;
             parse_dpkg_kernels(&out, &running)
         }
@@ -388,9 +398,18 @@ mod tests {
 
     #[test]
     fn versions_compare_numerically_not_lexically() {
-        assert_eq!(compare_versions("6.10.0", "6.9.0"), std::cmp::Ordering::Greater);
-        assert_eq!(compare_versions("6.8.0-40", "6.8.0-9"), std::cmp::Ordering::Greater);
-        assert_eq!(compare_versions("6.8.5", "6.8.5"), std::cmp::Ordering::Equal);
+        assert_eq!(
+            compare_versions("6.10.0", "6.9.0"),
+            std::cmp::Ordering::Greater
+        );
+        assert_eq!(
+            compare_versions("6.8.0-40", "6.8.0-9"),
+            std::cmp::Ordering::Greater
+        );
+        assert_eq!(
+            compare_versions("6.8.5", "6.8.5"),
+            std::cmp::Ordering::Equal
+        );
     }
 
     #[test]
@@ -403,8 +422,14 @@ mod tests {
         ];
         let plan = plan_removal(KernelManager::Dnf, kernels, 1);
         let removed: Vec<_> = plan.removable.iter().map(|k| k.version.as_str()).collect();
-        assert!(!removed.contains(&"6.9.0"), "running kernel must be retained");
-        assert!(!removed.contains(&"6.10.0"), "newest kernel must be retained");
+        assert!(
+            !removed.contains(&"6.9.0"),
+            "running kernel must be retained"
+        );
+        assert!(
+            !removed.contains(&"6.10.0"),
+            "newest kernel must be retained"
+        );
         assert_eq!(removed, vec!["6.7.0", "6.8.0"], "oldest first");
     }
 
@@ -482,7 +507,9 @@ linux-image-6.8.0-20-generic\tdeinstall ok not-installed
         let versions: Vec<_> = kernels.iter().map(|k| k.version.as_str()).collect();
         assert_eq!(versions, vec!["6.8.0-31-generic", "6.8.0-40-generic"]);
         assert!(
-            !kernels.iter().any(|k| k.packages.iter().any(|p| p == "linux-image-generic")),
+            !kernels
+                .iter()
+                .any(|k| k.packages.iter().any(|p| p == "linux-image-generic")),
             "the meta package pulls in future kernels and must never be removed"
         );
         assert!(
@@ -493,7 +520,11 @@ linux-image-6.8.0-20-generic\tdeinstall ok not-installed
 
     #[test]
     fn removal_command_uses_explicit_names_never_autoremove() {
-        let kernels = vec![kernel("6.10.0", true), kernel("6.9.0", false), kernel("6.8.0", false)];
+        let kernels = vec![
+            kernel("6.10.0", true),
+            kernel("6.9.0", false),
+            kernel("6.8.0", false),
+        ];
         let plan = plan_removal(KernelManager::Dnf, kernels, 1);
         let args = removal_command(&plan).expect("something to remove");
         assert!(!args.iter().any(|a| a.contains("autoremove")));
@@ -503,7 +534,11 @@ linux-image-6.8.0-20-generic\tdeinstall ok not-installed
 
     #[test]
     fn apt_purges_by_name() {
-        let kernels = vec![kernel("6.10.0", true), kernel("6.9.0", false), kernel("6.8.0", false)];
+        let kernels = vec![
+            kernel("6.10.0", true),
+            kernel("6.9.0", false),
+            kernel("6.8.0", false),
+        ];
         let plan = plan_removal(KernelManager::Apt, kernels, 1);
         let args = removal_command(&plan).expect("something to remove");
         assert_eq!(&args[..3], &["apt-get", "-y", "purge"]);

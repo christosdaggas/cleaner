@@ -38,10 +38,7 @@ impl Scanner {
         Self::with_options_and_cancellation(options, Arc::new(AtomicBool::new(false)))
     }
 
-    pub fn with_options_and_cancellation(
-        options: ScanOptions,
-        cancelled: Arc<AtomicBool>,
-    ) -> Self {
+    pub fn with_options_and_cancellation(options: ScanOptions, cancelled: Arc<AtomicBool>) -> Self {
         let security = SecurityAuditor::new();
         // Following directory symlinks allows a lexical cleanup path to escape
         // its scanned root. This unsafe mode is intentionally disabled even
@@ -316,7 +313,9 @@ impl Scanner {
 
         let match_results: Vec<ScanResult> = matches
             .par_iter()
-            .map(|match_path| self.scan_subfolder_match(match_path, include_dirs, file_pattern, min_age_days))
+            .map(|match_path| {
+                self.scan_subfolder_match(match_path, include_dirs, file_pattern, min_age_days)
+            })
             .collect();
 
         for r in match_results {
@@ -389,7 +388,10 @@ impl Scanner {
             .map(str::to_string)
             .collect();
 
-        if segments.is_empty() || segments.iter().any(|segment| segment == "." || segment == "..")
+        if segments.is_empty()
+            || segments
+                .iter()
+                .any(|segment| segment == "." || segment == "..")
         {
             return None;
         }
@@ -652,7 +654,11 @@ impl Scanner {
         let metadata = match std::fs::symlink_metadata(path) {
             Ok(metadata) => metadata,
             Err(e) => {
-                result.add_error(format!("Cannot read metadata for {}: {}", path.display(), e));
+                result.add_error(format!(
+                    "Cannot read metadata for {}: {}",
+                    path.display(),
+                    e
+                ));
                 return result;
             }
         };
@@ -734,7 +740,11 @@ impl Scanner {
             let metadata = match entry.metadata() {
                 Ok(m) => m,
                 Err(e) => {
-                    result.add_error(format!("Cannot read metadata for {}: {}", entry_path.display(), e));
+                    result.add_error(format!(
+                        "Cannot read metadata for {}: {}",
+                        entry_path.display(),
+                        e
+                    ));
                     continue;
                 }
             };
@@ -759,7 +769,11 @@ impl Scanner {
             }
 
             let is_symlink = entry_path.is_symlink();
-            let size = if metadata.is_file() { metadata.len() } else { 0 };
+            let size = if metadata.is_file() {
+                metadata.len()
+            } else {
+                0
+            };
 
             let file_entry = FileEntry::new(
                 entry_path.to_path_buf(),
@@ -878,7 +892,6 @@ impl Scanner {
             name == pattern
         }
     }
-
 }
 
 impl Default for Scanner {
@@ -912,11 +925,7 @@ mod tests {
         fs::write(profile.join("Code Cache/js/index"), b"code-cache").unwrap();
         fs::write(profile.join("GPUCache/data_0"), b"gpu-cache").unwrap();
         fs::write(profile.join("GrShaderCache/data_1"), b"shader-cache").unwrap();
-        fs::write(
-            profile.join("GraphiteDawnCache/data_2"),
-            b"graphite-cache",
-        )
-        .unwrap();
+        fs::write(profile.join("GraphiteDawnCache/data_2"), b"graphite-cache").unwrap();
 
         let mut cookies = BrowserRule::new(BrowserType::Chrome, BrowserDataType::Cookies);
         cookies.enabled = true;
@@ -937,8 +946,16 @@ mod tests {
         let scanner = Scanner::new();
         let result = scanner.scan_browser_rules(&[cookies, history, downloads, cache]);
 
-        let file_paths: HashSet<PathBuf> = result.files.iter().map(|entry| entry.path.clone()).collect();
-        let dir_paths: HashSet<PathBuf> = result.directories.iter().map(|entry| entry.path.clone()).collect();
+        let file_paths: HashSet<PathBuf> = result
+            .files
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
+        let dir_paths: HashSet<PathBuf> = result
+            .directories
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
 
         assert!(file_paths.contains(&profile.join("Cookies")));
         assert!(file_paths.contains(&profile.join("History")));
@@ -950,7 +967,10 @@ mod tests {
         assert!(!file_paths.contains(&profile.join("Preferences")));
         assert!(!file_paths.contains(&profile.join("Bookmarks")));
         assert_eq!(
-            file_paths.iter().filter(|path| **path == profile.join("History")).count(),
+            file_paths
+                .iter()
+                .filter(|path| **path == profile.join("History"))
+                .count(),
             1
         );
         assert!(dir_paths.contains(&profile.join("Cache/Cache_Data")));
@@ -972,8 +992,7 @@ mod tests {
         .unwrap();
         fs::write(profile.join("Bookmarks"), b"keep").unwrap();
 
-        let mut site_data =
-            BrowserRule::new(BrowserType::Yandex, BrowserDataType::SiteData);
+        let mut site_data = BrowserRule::new(BrowserType::Yandex, BrowserDataType::SiteData);
         site_data.enabled = true;
         site_data.custom_path = Some(dir.path().to_path_buf());
 
@@ -983,8 +1002,11 @@ mod tests {
         crash_reports.custom_path = Some(dir.path().to_path_buf());
 
         let result = Scanner::new().scan_browser_rules(&[site_data, crash_reports]);
-        let file_paths: HashSet<PathBuf> =
-            result.files.iter().map(|entry| entry.path.clone()).collect();
+        let file_paths: HashSet<PathBuf> = result
+            .files
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
 
         assert!(file_paths.contains(&profile.join("Local Storage/leveldb/data")));
         assert!(file_paths.contains(&dir.path().join("Crash Reports/completed/report.dmp")));
@@ -1004,18 +1026,20 @@ mod tests {
             AppRule::new("User State Logs", "XDG state logs", state_dir.join("*.log"));
         top_level_logs.enabled = true;
 
-        let mut nested_logs =
-            AppRule::new(
-                "Application State Logs",
-                "Per-application XDG state logs",
-                state_dir.join("*/*.log"),
-            );
+        let mut nested_logs = AppRule::new(
+            "Application State Logs",
+            "Per-application XDG state logs",
+            state_dir.join("*/*.log"),
+        );
         nested_logs.enabled = true;
 
         let scanner = Scanner::new();
         let result = scanner.scan_app_rules(&[top_level_logs, nested_logs]);
-        let file_paths: HashSet<PathBuf> =
-            result.files.iter().map(|entry| entry.path.clone()).collect();
+        let file_paths: HashSet<PathBuf> = result
+            .files
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
 
         assert!(file_paths.contains(&state_dir.join("root.log")));
         assert!(file_paths.contains(&state_dir.join("app/app.log")));
@@ -1048,8 +1072,11 @@ mod tests {
             .iter()
             .map(|entry| entry.path.clone())
             .collect();
-        let file_paths: HashSet<PathBuf> =
-            result.files.iter().map(|entry| entry.path.clone()).collect();
+        let file_paths: HashSet<PathBuf> = result
+            .files
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
 
         assert!(dir_paths.contains(&alpha_target));
         assert!(dir_paths.contains(&beta_target));
@@ -1132,8 +1159,11 @@ mod tests {
             .iter()
             .map(|entry| entry.path.clone())
             .collect();
-        let file_paths: HashSet<PathBuf> =
-            result.files.iter().map(|entry| entry.path.clone()).collect();
+        let file_paths: HashSet<PathBuf> = result
+            .files
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
 
         assert!(dir_paths.contains(&p1_debug));
         assert!(dir_paths.contains(&p2_debug));
@@ -1207,9 +1237,7 @@ mod tests {
         );
 
         // Invalid patterns never match anything.
-        assert!(scanner
-            .find_matching_subdirectories(&root, "..")
-            .is_empty());
+        assert!(scanner.find_matching_subdirectories(&root, "..").is_empty());
         assert!(scanner.find_matching_subdirectories(&root, "  ").is_empty());
     }
 
@@ -1272,10 +1300,7 @@ mod tests {
     fn external_cancellation_marks_scan_result() {
         let dir = TempDir::new().unwrap();
         let cancellation = Arc::new(AtomicBool::new(true));
-        let scanner = Scanner::with_options_and_cancellation(
-            ScanOptions::default(),
-            cancellation,
-        );
+        let scanner = Scanner::with_options_and_cancellation(ScanOptions::default(), cancellation);
 
         let result = scanner.scan_directory(dir.path(), false);
 
@@ -1312,10 +1337,7 @@ mod tests {
             .set_times(old_times)
             .unwrap();
 
-        let result = Scanner::new().scan_application_log_paths(
-            &[dir.path().to_path_buf()],
-            30,
-        );
+        let result = Scanner::new().scan_application_log_paths(&[dir.path().to_path_buf()], 30);
         let paths: HashSet<_> = result.files.iter().map(|entry| &entry.path).collect();
 
         assert!(paths.contains(&old_log));
@@ -1372,14 +1394,20 @@ mod tests {
         let result = scanner.scan_system_rules(&[user_cache, thumbnails]);
         let a = thumbs.join("a.png");
         let dupes = result.files.iter().filter(|f| f.path == a).count();
-        eprintln!("VERIFIER: file_count={} total_size={} dupes_of_a={}",
-            result.file_count, result.total_size, dupes);
+        eprintln!(
+            "VERIFIER: file_count={} total_size={} dupes_of_a={}",
+            result.file_count, result.total_size, dupes
+        );
 
         // now clean and see what happens
         let cleaner = crate::services::Cleaner::new();
         let clean = cleaner.clean(&result);
-        eprintln!("VERIFIER: deleted={} freed={} failed={:?}",
-            clean.deleted_files.len(), clean.bytes_freed, clean.failed);
+        eprintln!(
+            "VERIFIER: deleted={} freed={} failed={:?}",
+            clean.deleted_files.len(),
+            clean.bytes_freed,
+            clean.failed
+        );
         assert_eq!(dupes, 1, "expected dedup but got {} copies", dupes);
     }
 }

@@ -64,21 +64,13 @@ impl SystemRuleType {
     pub fn paths(&self) -> Vec<PathBuf> {
         match self {
             Self::TmpDirectory => vec![PathBuf::from("/tmp")],
-            Self::UserCache => {
-                dirs::cache_dir()
-                    .map(|p| vec![p])
-                    .unwrap_or_default()
-            }
-            Self::Thumbnails => {
-                dirs::cache_dir()
-                    .map(|cache| vec![cache.join("thumbnails")])
-                    .unwrap_or_default()
-            }
-            Self::Trash => {
-                dirs::data_local_dir()
-                    .map(|data| vec![data.join("Trash/files"), data.join("Trash/info")])
-                    .unwrap_or_default()
-            }
+            Self::UserCache => dirs::cache_dir().map(|p| vec![p]).unwrap_or_default(),
+            Self::Thumbnails => dirs::cache_dir()
+                .map(|cache| vec![cache.join("thumbnails")])
+                .unwrap_or_default(),
+            Self::Trash => dirs::data_local_dir()
+                .map(|data| vec![data.join("Trash/files"), data.join("Trash/info")])
+                .unwrap_or_default(),
             Self::CrashReports => {
                 let mut paths = Vec::new();
                 if let Some(home) = dirs::home_dir() {

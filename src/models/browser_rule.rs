@@ -75,15 +75,47 @@ impl BrowserType {
 
     fn desktop_file_names(&self) -> &'static [&'static str] {
         match self {
-            Self::Firefox => &["firefox.desktop", "firefox_firefox.desktop", "org.mozilla.firefox.desktop"],
-            Self::Chrome => &["google-chrome.desktop", "google-chrome-stable.desktop", "com.google.Chrome.desktop"],
-            Self::Chromium => &["chromium.desktop", "chromium-browser.desktop", "chromium_chromium.desktop", "org.chromium.Chromium.desktop"],
-            Self::Brave => &["brave-browser.desktop", "brave-browser-stable.desktop", "com.brave.Browser.desktop"],
-            Self::Edge => &["microsoft-edge.desktop", "microsoft-edge-stable.desktop", "com.microsoft.Edge.desktop"],
+            Self::Firefox => &[
+                "firefox.desktop",
+                "firefox_firefox.desktop",
+                "org.mozilla.firefox.desktop",
+            ],
+            Self::Chrome => &[
+                "google-chrome.desktop",
+                "google-chrome-stable.desktop",
+                "com.google.Chrome.desktop",
+            ],
+            Self::Chromium => &[
+                "chromium.desktop",
+                "chromium-browser.desktop",
+                "chromium_chromium.desktop",
+                "org.chromium.Chromium.desktop",
+            ],
+            Self::Brave => &[
+                "brave-browser.desktop",
+                "brave-browser-stable.desktop",
+                "com.brave.Browser.desktop",
+            ],
+            Self::Edge => &[
+                "microsoft-edge.desktop",
+                "microsoft-edge-stable.desktop",
+                "com.microsoft.Edge.desktop",
+            ],
             Self::Opera => &["opera.desktop", "com.opera.Opera.desktop"],
-            Self::Vivaldi => &["vivaldi.desktop", "vivaldi-stable.desktop", "com.vivaldi.Vivaldi.desktop"],
-            Self::Yandex => &["yandex-browser.desktop", "yandex-browser-stable.desktop", "ru.yandex.Browser.desktop"],
-            Self::DuckDuckGo => &["duckduckgo.desktop", "com.duckduckgo.DesktopBrowser.desktop"],
+            Self::Vivaldi => &[
+                "vivaldi.desktop",
+                "vivaldi-stable.desktop",
+                "com.vivaldi.Vivaldi.desktop",
+            ],
+            Self::Yandex => &[
+                "yandex-browser.desktop",
+                "yandex-browser-stable.desktop",
+                "ru.yandex.Browser.desktop",
+            ],
+            Self::DuckDuckGo => &[
+                "duckduckgo.desktop",
+                "com.duckduckgo.DesktopBrowser.desktop",
+            ],
         }
     }
 
@@ -282,11 +314,15 @@ impl BrowserDataType {
     pub fn description(&self) -> &'static str {
         match self {
             Self::Cache => "Temporary files stored locally. Safe to delete.",
-            Self::SiteData => "Offline website data and local storage. May sign you out of some sites.",
+            Self::SiteData => {
+                "Offline website data and local storage. May sign you out of some sites."
+            }
             Self::CrashReports => "Diagnostic crash files. Safe to delete.",
             Self::History => "Record of visited websites. Cannot be recovered.",
             Self::Cookies => "Login sessions and preferences. Will log you out of websites.",
-            Self::DownloadHistory => "List of downloaded files. Does not delete the files themselves.",
+            Self::DownloadHistory => {
+                "List of downloaded files. Does not delete the files themselves."
+            }
         }
     }
 
@@ -340,9 +376,16 @@ impl BrowserDataType {
                     "*/Service Worker",
                     "*/WebStorage",
                 ],
-                Self::CrashReports => &["Crash Reports", "Crashpad", "*/Crash Reports", "*/Crashpad"],
+                Self::CrashReports => {
+                    &["Crash Reports", "Crashpad", "*/Crash Reports", "*/Crashpad"]
+                }
                 Self::History => &["History", "*/History"],
-                Self::Cookies => &["Cookies", "Network/Cookies", "*/Cookies", "*/Network/Cookies"],
+                Self::Cookies => &[
+                    "Cookies",
+                    "Network/Cookies",
+                    "*/Cookies",
+                    "*/Network/Cookies",
+                ],
                 Self::DownloadHistory => &["History", "*/History"],
             },
         }
@@ -406,6 +449,10 @@ impl BrowserRule {
     }
 
     pub fn display_name(&self) -> String {
-        format!("{} - {}", self.browser.display_name(), self.data_type.display_name())
+        format!(
+            "{} - {}",
+            self.browser.display_name(),
+            self.data_type.display_name()
+        )
     }
 }

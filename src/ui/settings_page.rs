@@ -1,9 +1,9 @@
 use crate::models::{AppLanguage, ColorScheme, ScheduleDay};
 use crate::storage::Storage;
 use crate::theme;
+use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
-use gtk4::glib;
 use libadwaita as adw;
 use libadwaita::prelude::*;
 use std::cell::RefCell;
@@ -248,8 +248,7 @@ impl SettingsPage {
                 if let Err(error) = storage_clone.update_settings(|current| {
                     current.set_scheduled_cleanup_days(selected);
                 }) {
-                    schedule_row_clone
-                        .set_subtitle(&format!("Could not save schedule: {error}"));
+                    schedule_row_clone.set_subtitle(&format!("Could not save schedule: {error}"));
                     return;
                 }
                 Self::refresh_schedule_status(&storage_clone, &schedule_row_clone);
@@ -380,9 +379,7 @@ impl SettingsPage {
                 &[("{days}", &day_phrase), ("{time}", &time)],
             )
         } else {
-            crate::i18n::tr(
-                "Off. Enable to run selected rules at the chosen day and time",
-            )
+            crate::i18n::tr("Off. Enable to run selected rules at the chosen day and time")
         }
     }
 
@@ -467,8 +464,7 @@ impl SettingsPage {
         let journal_row = adw::ActionRow::new();
         journal_row.set_title("System Journal");
         let journal_available = crate::services::system_journal_available();
-        let system_journal_enabled =
-            journal_available && settings.system_journal_cleanup_enabled;
+        let system_journal_enabled = journal_available && settings.system_journal_cleanup_enabled;
         if settings.system_journal_cleanup_enabled && !journal_available {
             if let Err(error) = storage.update_settings(|current| {
                 current.system_journal_cleanup_enabled = false;
@@ -492,10 +488,8 @@ impl SettingsPage {
         let retention_row = adw::ActionRow::new();
         retention_row.set_title("Keep Recent Logs");
         retention_row.set_subtitle("Only clean log data older than this retention period");
-        retention_row.set_sensitive(
-            settings.application_log_cleanup_enabled
-                || system_journal_enabled,
-        );
+        retention_row
+            .set_sensitive(settings.application_log_cleanup_enabled || system_journal_enabled);
 
         let retention_controls = gtk4::Box::new(gtk4::Orientation::Horizontal, 6);
         retention_controls.set_valign(gtk4::Align::Center);
@@ -663,5 +657,4 @@ impl SettingsPage {
 
         group.upcast()
     }
-
 }

@@ -6,7 +6,8 @@ const LIGHT_WINDOW_BG: gdk::RGBA = gdk::RGBA::new(250.0 / 255.0, 250.0 / 255.0, 
 const LIGHT_WINDOW_FG: gdk::RGBA = gdk::RGBA::new(0.0, 0.0, 6.0 / 255.0, 0.8);
 const LIGHT_VIEW_BG: gdk::RGBA = gdk::RGBA::new(1.0, 1.0, 1.0, 1.0);
 const LIGHT_HEADERBAR_BG: gdk::RGBA = gdk::RGBA::new(1.0, 1.0, 1.0, 1.0);
-const LIGHT_SIDEBAR_BG: gdk::RGBA = gdk::RGBA::new(235.0 / 255.0, 235.0 / 255.0, 237.0 / 255.0, 1.0);
+const LIGHT_SIDEBAR_BG: gdk::RGBA =
+    gdk::RGBA::new(235.0 / 255.0, 235.0 / 255.0, 237.0 / 255.0, 1.0);
 const LIGHT_SECONDARY_SIDEBAR_BG: gdk::RGBA =
     gdk::RGBA::new(243.0 / 255.0, 243.0 / 255.0, 245.0 / 255.0, 1.0);
 const LIGHT_CARD_BG: gdk::RGBA = gdk::RGBA::new(1.0, 1.0, 1.0, 1.0);
@@ -22,7 +23,8 @@ const DARK_SECONDARY_SIDEBAR_BG: gdk::RGBA =
 const DARK_CARD_BG: gdk::RGBA = gdk::RGBA::new(1.0, 1.0, 1.0, 0.08);
 const DARK_DIALOG_BG: gdk::RGBA = gdk::RGBA::new(54.0 / 255.0, 54.0 / 255.0, 58.0 / 255.0, 1.0);
 const DARK_POPOVER_BG: gdk::RGBA = gdk::RGBA::new(54.0 / 255.0, 54.0 / 255.0, 58.0 / 255.0, 1.0);
-const DEFAULT_ACCENT_BG: gdk::RGBA = gdk::RGBA::new(53.0 / 255.0, 132.0 / 255.0, 228.0 / 255.0, 1.0);
+const DEFAULT_ACCENT_BG: gdk::RGBA =
+    gdk::RGBA::new(53.0 / 255.0, 132.0 / 255.0, 228.0 / 255.0, 1.0);
 const DEFAULT_ACCENT_FG: gdk::RGBA = gdk::RGBA::new(1.0, 1.0, 1.0, 1.0);
 
 #[allow(dead_code)]
@@ -113,8 +115,16 @@ impl ThemeSnapshot {
             window_fg,
             view_bg: lookup_color(widget, "view_bg_color", fallback_view_bg(is_dark)),
             view_fg,
-            headerbar_bg: lookup_color(widget, "headerbar_bg_color", fallback_headerbar_bg(is_dark)),
-            headerbar_fg: lookup_color(widget, "headerbar_fg_color", fallback_headerbar_fg(is_dark)),
+            headerbar_bg: lookup_color(
+                widget,
+                "headerbar_bg_color",
+                fallback_headerbar_bg(is_dark),
+            ),
+            headerbar_fg: lookup_color(
+                widget,
+                "headerbar_fg_color",
+                fallback_headerbar_fg(is_dark),
+            ),
             sidebar_bg: lookup_color(widget, "sidebar_bg_color", fallback_sidebar_bg(is_dark)),
             sidebar_fg: lookup_color(widget, "sidebar_fg_color", fallback_sidebar_fg(is_dark)),
             secondary_sidebar_bg: lookup_color(
@@ -196,7 +206,11 @@ pub fn sync_runtime_classes(widget: &impl IsA<gtk4::Widget>) {
 
     set_class(widget, "data-cleaner-dark", style_manager.is_dark());
     set_class(widget, "data-cleaner-light", !style_manager.is_dark());
-    set_class(widget, "data-cleaner-high-contrast", style_manager.is_high_contrast());
+    set_class(
+        widget,
+        "data-cleaner-high-contrast",
+        style_manager.is_high_contrast(),
+    );
     set_class(
         widget,
         "data-cleaner-reduced-motion",
@@ -229,7 +243,10 @@ pub fn rgba_to_cairo(color: &gdk::RGBA) -> (f64, f64, f64, f64) {
 /// is available in the Rust bindings, this function is retained with the deprecation allowed.
 #[allow(deprecated)]
 fn lookup_color(widget: &gtk4::Widget, name: &str, fallback: gdk::RGBA) -> gdk::RGBA {
-    widget.style_context().lookup_color(name).unwrap_or(fallback)
+    widget
+        .style_context()
+        .lookup_color(name)
+        .unwrap_or(fallback)
 }
 
 fn with_alpha(color: &gdk::RGBA, alpha: f32) -> gdk::RGBA {
@@ -255,15 +272,27 @@ fn set_class(widget: &gtk4::Widget, css_class: &str, enabled: bool) {
 }
 
 const fn fallback_window_bg(is_dark: bool) -> gdk::RGBA {
-    if is_dark { DARK_WINDOW_BG } else { LIGHT_WINDOW_BG }
+    if is_dark {
+        DARK_WINDOW_BG
+    } else {
+        LIGHT_WINDOW_BG
+    }
 }
 
 const fn fallback_window_fg(is_dark: bool) -> gdk::RGBA {
-    if is_dark { DARK_WINDOW_FG } else { LIGHT_WINDOW_FG }
+    if is_dark {
+        DARK_WINDOW_FG
+    } else {
+        LIGHT_WINDOW_FG
+    }
 }
 
 const fn fallback_view_bg(is_dark: bool) -> gdk::RGBA {
-    if is_dark { DARK_VIEW_BG } else { LIGHT_VIEW_BG }
+    if is_dark {
+        DARK_VIEW_BG
+    } else {
+        LIGHT_VIEW_BG
+    }
 }
 
 const fn fallback_view_fg(is_dark: bool) -> gdk::RGBA {
@@ -271,7 +300,11 @@ const fn fallback_view_fg(is_dark: bool) -> gdk::RGBA {
 }
 
 const fn fallback_headerbar_bg(is_dark: bool) -> gdk::RGBA {
-    if is_dark { DARK_HEADERBAR_BG } else { LIGHT_HEADERBAR_BG }
+    if is_dark {
+        DARK_HEADERBAR_BG
+    } else {
+        LIGHT_HEADERBAR_BG
+    }
 }
 
 const fn fallback_headerbar_fg(is_dark: bool) -> gdk::RGBA {
@@ -279,7 +312,11 @@ const fn fallback_headerbar_fg(is_dark: bool) -> gdk::RGBA {
 }
 
 const fn fallback_sidebar_bg(is_dark: bool) -> gdk::RGBA {
-    if is_dark { DARK_SIDEBAR_BG } else { LIGHT_SIDEBAR_BG }
+    if is_dark {
+        DARK_SIDEBAR_BG
+    } else {
+        LIGHT_SIDEBAR_BG
+    }
 }
 
 const fn fallback_sidebar_fg(is_dark: bool) -> gdk::RGBA {
@@ -287,7 +324,11 @@ const fn fallback_sidebar_fg(is_dark: bool) -> gdk::RGBA {
 }
 
 const fn fallback_secondary_sidebar_bg(is_dark: bool) -> gdk::RGBA {
-    if is_dark { DARK_SECONDARY_SIDEBAR_BG } else { LIGHT_SECONDARY_SIDEBAR_BG }
+    if is_dark {
+        DARK_SECONDARY_SIDEBAR_BG
+    } else {
+        LIGHT_SECONDARY_SIDEBAR_BG
+    }
 }
 
 const fn fallback_secondary_sidebar_fg(is_dark: bool) -> gdk::RGBA {
@@ -295,7 +336,11 @@ const fn fallback_secondary_sidebar_fg(is_dark: bool) -> gdk::RGBA {
 }
 
 const fn fallback_card_bg(is_dark: bool) -> gdk::RGBA {
-    if is_dark { DARK_CARD_BG } else { LIGHT_CARD_BG }
+    if is_dark {
+        DARK_CARD_BG
+    } else {
+        LIGHT_CARD_BG
+    }
 }
 
 const fn fallback_card_fg(is_dark: bool) -> gdk::RGBA {
@@ -303,7 +348,11 @@ const fn fallback_card_fg(is_dark: bool) -> gdk::RGBA {
 }
 
 const fn fallback_dialog_bg(is_dark: bool) -> gdk::RGBA {
-    if is_dark { DARK_DIALOG_BG } else { LIGHT_DIALOG_BG }
+    if is_dark {
+        DARK_DIALOG_BG
+    } else {
+        LIGHT_DIALOG_BG
+    }
 }
 
 const fn fallback_dialog_fg(is_dark: bool) -> gdk::RGBA {
@@ -311,7 +360,11 @@ const fn fallback_dialog_fg(is_dark: bool) -> gdk::RGBA {
 }
 
 const fn fallback_popover_bg(is_dark: bool) -> gdk::RGBA {
-    if is_dark { DARK_POPOVER_BG } else { LIGHT_POPOVER_BG }
+    if is_dark {
+        DARK_POPOVER_BG
+    } else {
+        LIGHT_POPOVER_BG
+    }
 }
 
 const fn fallback_popover_fg(is_dark: bool) -> gdk::RGBA {

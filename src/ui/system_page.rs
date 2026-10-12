@@ -1,10 +1,10 @@
 use crate::models::SystemRuleType;
 use crate::services::{build_plan, detect_manager, removal_command};
 use crate::storage::Storage;
+use gtk4::gio;
+use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
-use gtk4::glib;
-use gtk4::gio;
 use libadwaita as adw;
 use libadwaita::prelude::*;
 use std::cell::{Cell, RefCell};
@@ -191,7 +191,8 @@ impl SystemPage {
 
         let clean_kernels_row = adw::ActionRow::new();
         clean_kernels_row.set_title("Clean Old Kernels");
-        clean_kernels_row.set_subtitle("Lists exactly what will be removed before asking (requires pkexec)");
+        clean_kernels_row
+            .set_subtitle("Lists exactly what will be removed before asking (requires pkexec)");
 
         let clean_kernels_btn = gtk4::Button::with_label("Clean");
         clean_kernels_btn.add_css_class("suggested-action");
@@ -288,9 +289,7 @@ impl SystemPage {
         group.add(&cache_expander);
 
         let pkexec_available = find_system_command("pkexec").is_some();
-        clean_kernels_btn.set_sensitive(
-            pkexec_available && detect_manager().is_some(),
-        );
+        clean_kernels_btn.set_sensitive(pkexec_available && detect_manager().is_some());
         clean_apt_btn.set_sensitive(pkexec_available && find_system_command("apt-get").is_some());
         clean_dnf_btn.set_sensitive(pkexec_available && find_system_command("dnf").is_some());
         clean_pacman_btn.set_sensitive(pkexec_available && find_system_command("pacman").is_some());
@@ -339,7 +338,9 @@ impl SystemPage {
         command_line.extend(args.into_iter().skip(1).map(OsString::from));
         self.imp().operation_running.set(true);
 
-        let window = self.root().and_then(|root| root.downcast::<gtk4::Window>().ok());
+        let window = self
+            .root()
+            .and_then(|root| root.downcast::<gtk4::Window>().ok());
         let dialog = adw::MessageDialog::new(
             window.as_ref(),
             Some(&crate::i18n::tr("Confirm Administrator Operation")),
@@ -370,12 +371,7 @@ impl SystemPage {
         dialog.present();
     }
 
-    fn execute_root_command(
-        &self,
-        button: &gtk4::Button,
-        title: &str,
-        cmd_args: Vec<OsString>,
-    ) {
+    fn execute_root_command(&self, button: &gtk4::Button, title: &str, cmd_args: Vec<OsString>) {
         button.set_sensitive(false);
         let original_label = button.label().map(|s| s.to_string()).unwrap_or_default();
         button.set_label("Cleaning...");
@@ -393,14 +389,15 @@ impl SystemPage {
                 gio::SubprocessFlags::STDOUT_PIPE | gio::SubprocessFlags::STDERR_PIPE,
             ) {
                 Ok(subprocess) => {
-                    let (stdout, stderr, success) = match subprocess.communicate_utf8_future(None).await {
-                        Ok((stdout, stderr)) => (
-                            stdout.unwrap_or_default().to_string(),
-                            stderr.unwrap_or_default().to_string(),
-                            subprocess.wait_check_future().await.is_ok(),
-                        ),
-                        Err(err) => (String::new(), err.to_string(), false),
-                    };
+                    let (stdout, stderr, success) =
+                        match subprocess.communicate_utf8_future(None).await {
+                            Ok((stdout, stderr)) => (
+                                stdout.unwrap_or_default().to_string(),
+                                stderr.unwrap_or_default().to_string(),
+                                subprocess.wait_check_future().await.is_ok(),
+                            ),
+                            Err(err) => (String::new(), err.to_string(), false),
+                        };
 
                     btn.set_sensitive(true);
                     page.imp().operation_running.set(false);
@@ -408,11 +405,7 @@ impl SystemPage {
                         btn.set_label("Done");
                     } else {
                         btn.set_label("Failed");
-                        page.show_command_result(
-                            &command_title,
-                            stderr.trim(),
-                            stdout.trim(),
-                        );
+                        page.show_command_result(&command_title, stderr.trim(), stdout.trim());
                     }
 
                     let btn2 = btn.clone();

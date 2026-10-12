@@ -14,7 +14,11 @@ pub struct AppRule {
 }
 
 impl AppRule {
-    pub fn new(name: impl Into<String>, description: impl Into<String>, path: impl Into<PathBuf>) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        description: impl Into<String>,
+        path: impl Into<PathBuf>,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             name: name.into(),
@@ -25,7 +29,11 @@ impl AppRule {
         }
     }
 
-    pub fn builtin(name: impl Into<String>, description: impl Into<String>, path: impl Into<PathBuf>) -> Self {
+    pub fn builtin(
+        name: impl Into<String>,
+        description: impl Into<String>,
+        path: impl Into<PathBuf>,
+    ) -> Self {
         let mut rule = Self::new(name, description, path);
         rule.builtin = true;
         rule
@@ -49,36 +57,16 @@ impl AppRule {
                 "Node.js package manager cache",
                 "~/.npm/_cacache",
             ),
-            Self::builtin(
-                "NPM Logs",
-                "Node.js package manager logs",
-                "~/.npm/_logs",
-            ),
-            Self::builtin(
-                "Yarn Cache",
-                "Yarn package manager cache",
-                "~/.cache/yarn",
-            ),
+            Self::builtin("NPM Logs", "Node.js package manager logs", "~/.npm/_logs"),
+            Self::builtin("Yarn Cache", "Yarn package manager cache", "~/.cache/yarn"),
             Self::builtin(
                 "Yarn Logs",
                 "Yarn package manager logs",
                 "~/.cache/yarn/logs",
             ),
-            Self::builtin(
-                "pnpm Cache",
-                "pnpm package manager cache",
-                "~/.cache/pnpm",
-            ),
-            Self::builtin(
-                "pip Cache",
-                "Python package manager cache",
-                "~/.cache/pip",
-            ),
-            Self::builtin(
-                "Poetry Cache",
-                "Python Poetry cache",
-                "~/.cache/pypoetry",
-            ),
+            Self::builtin("pnpm Cache", "pnpm package manager cache", "~/.cache/pnpm"),
+            Self::builtin("pip Cache", "Python package manager cache", "~/.cache/pip"),
+            Self::builtin("Poetry Cache", "Python Poetry cache", "~/.cache/pypoetry"),
             Self::builtin(
                 "Cargo Cache",
                 "Rust package manager cache (registry only)",
@@ -94,11 +82,7 @@ impl AppRule {
                 "Java Gradle build cache",
                 "~/.gradle/caches",
             ),
-            Self::builtin(
-                "Go Mod Cache",
-                "Go module cache",
-                "~/go/pkg/mod/cache",
-            ),
+            Self::builtin("Go Mod Cache", "Go module cache", "~/go/pkg/mod/cache"),
             Self::builtin(
                 "Go Build Cache",
                 "Go compiler build cache",
