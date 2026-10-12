@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fs;
 use std::os::unix::fs::MetadataExt;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -78,6 +78,8 @@ pub struct SecurityAuditor {
     allowed_user_bases: Vec<PathBuf>,
     protected_home_paths: HashSet<PathBuf>,
     protected_cache_paths: HashSet<PathBuf>,
+    /// `~/.var/app`. Each Flatpak app's `data` folder below it is protected.
+    flatpak_app_root: PathBuf,
     current_uid: u32,
     min_path_depth: usize,
 }
@@ -96,6 +98,7 @@ impl SecurityAuditor {
             allowed_user_bases: Vec::new(),
             protected_home_paths: HashSet::new(),
             protected_cache_paths: HashSet::new(),
+            flatpak_app_root: home.join(".var/app"),
             current_uid: unsafe { libc::getuid() },
             min_path_depth: 3,
         };
@@ -167,6 +170,7 @@ impl SecurityAuditor {
             home.join(".mozilla"),
             home.join(".local"),
             home.join(".var"),
+            home.join("snap"),
             state,
             PathBuf::from("/tmp"),
         ];
@@ -234,6 +238,13 @@ impl SecurityAuditor {
             "applications",
             "gvfs-metadata",
             "recently-used.xbel",
+            // Installed software, containers, virtual machines, and game
+            // libraries. These are large, but they are user data, not junk.
+            "flatpak",
+            "containers",
+            "gnome-boxes",
+            "libvirt",
+            "Steam",
         ];
         for dir_name in protected_local_share {
             auditor
@@ -256,8 +267,12 @@ impl SecurityAuditor {
             );
         }
 
-        let path_str = path.to_string_lossy();
-        if path_str.contains("..") {
+        // Reject `..` components, not every name that happens to contain two
+        // dots: `archive..old` is a normal file name.
+        if path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+        {
             return AuditResult::unsafe_path(
                 path.to_path_buf(),
                 SecurityError::PathTraversal(path.to_path_buf()),
@@ -311,7 +326,7 @@ impl SecurityAuditor {
             );
         }
 
-        if self.is_protected_cache_path(&canonical) {
+        if self.is_protected_cache_path(&canonical) || self.is_flatpak_app_data(&canonical) {
             return AuditResult::unsafe_path(
                 path.to_path_buf(),
                 SecurityError::ProtectedPath(canonical),
@@ -475,6 +490,20 @@ impl SecurityAuditor {
     }
 
     /// Check if path is a protected cache directory path
+    /// Check if path is inside a Flatpak app's persistent data folder,
+    /// `~/.var/app/<app-id>/data`. The sibling `cache` and `config` folders
+    /// stay cleanable so Flatpak browser and app caches still work.
+    fn is_flatpak_app_data(&self, path: &Path) -> bool {
+        let Ok(inside) = path.strip_prefix(&self.flatpak_app_root) else {
+            return false;
+        };
+        let mut components = inside.components();
+        components.next();
+        components
+            .next()
+            .is_some_and(|component| component.as_os_str() == "data")
+    }
+
     fn is_protected_cache_path(&self, path: &Path) -> bool {
         for protected in &self.protected_cache_paths {
             if path == protected || path.starts_with(protected) {
@@ -553,6 +582,49 @@ mod tests {
 
         let result = auditor.audit(Path::new("/home/user/../../../etc/passwd"));
         assert!(!result.is_safe);
+    }
+
+    #[test]
+    fn names_containing_two_dots_are_not_traversal() {
+        let auditor = SecurityAuditor::new();
+        let cache = dirs::cache_dir().expect("tests need a cache directory");
+
+        let result = auditor.audit(&cache.join("data-cleaner-test/archive..old"));
+        assert!(
+            result.is_safe,
+            "a dotted file name was rejected: {:?}",
+            result.violations
+        );
+    }
+
+    #[test]
+    fn flatpak_app_data_and_user_software_are_protected() {
+        let auditor = SecurityAuditor::new();
+        let home = dirs::home_dir().expect("tests need a home directory");
+        let data_local = dirs::data_local_dir().expect("tests need a data directory");
+
+        let protected = [
+            home.join(".var/app/org.example.App/data"),
+            home.join(".var/app/org.example.App/data/save.db"),
+            data_local.join("flatpak/app"),
+            data_local.join("containers/storage"),
+            data_local.join("gnome-boxes/images/disk.qcow2"),
+            data_local.join("libvirt/images/vm.qcow2"),
+            data_local.join("Steam/steamapps"),
+        ];
+        for path in protected {
+            assert!(
+                !auditor.audit(&path).is_safe,
+                "{} should be protected",
+                path.display()
+            );
+        }
+
+        let flatpak_cache = home.join(".var/app/org.example.App/cache/thumbnails");
+        assert!(
+            auditor.audit(&flatpak_cache).is_safe,
+            "Flatpak caches must stay cleanable"
+        );
     }
 
     #[test]

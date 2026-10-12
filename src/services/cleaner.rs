@@ -2,10 +2,13 @@ use crate::models::{BrowserType, CleanError, CleanResult, FileEntry, ScanResult}
 use crate::services::SecurityAuditor;
 use std::collections::HashSet;
 use std::fs;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
+
+const ALREADY_REMOVED_REASON: &str = "Already removed before cleanup reached it";
 
 #[derive(Debug, Clone, Copy)]
 pub struct CleanOptions {
@@ -130,13 +133,14 @@ impl Cleaner {
     /// so this is intentionally computed once per cleanup rather than per
     /// file.
     fn browser_path_table() -> Vec<(BrowserType, PathBuf)> {
-        let mut paths = Vec::with_capacity(BrowserType::all().len() * 2);
+        let mut paths = Vec::new();
         for browser in BrowserType::all() {
-            if let Some(p) = browser.cache_path() {
-                paths.push((*browser, p));
-            }
-            if let Some(p) = browser.config_path() {
-                paths.push((*browser, p));
+            for root in browser
+                .cache_roots()
+                .into_iter()
+                .chain(browser.config_roots())
+            {
+                paths.push((*browser, root));
             }
         }
         paths
@@ -211,6 +215,10 @@ impl Cleaner {
                     result.add_deleted_file(file.path.clone(), size);
                     debug!("Deleted file: {}", file.path.display());
                 }
+                Err(CleanError::AlreadyRemoved(_)) => {
+                    result.add_skipped(file.path.clone(), ALREADY_REMOVED_REASON);
+                    debug!("Already removed: {}", file.path.display());
+                }
                 Err(e) => {
                     result.add_failed(file.path.clone(), e.to_string());
                     warn!("Failed to delete {}: {}", file.path.display(), e);
@@ -238,6 +246,8 @@ impl Cleaner {
                             dir.path.clone(),
                             "Directory was preserved because it is not empty",
                         );
+                    } else if matches!(e, CleanError::AlreadyRemoved(_)) {
+                        result.add_skipped(dir.path.clone(), ALREADY_REMOVED_REASON);
                     } else {
                         result.add_failed(dir.path.clone(), e.to_string());
                         warn!("Failed to delete directory {}: {}", dir.path.display(), e);
@@ -256,7 +266,29 @@ impl Cleaner {
         result
     }
 
+    /// A scanned entry can disappear before cleanup reaches it, for example
+    /// when a running application prunes its own cache. That is not a
+    /// failure, so it is reported separately from real errors.
+    fn ensure_present(path: &Path) -> Result<(), CleanError> {
+        match fs::symlink_metadata(path) {
+            Err(error) if error.kind() == ErrorKind::NotFound => {
+                Err(CleanError::AlreadyRemoved(path.to_path_buf()))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    fn removal_error(path: &Path, error: std::io::Error) -> CleanError {
+        match error.kind() {
+            ErrorKind::NotFound => CleanError::AlreadyRemoved(path.to_path_buf()),
+            ErrorKind::PermissionDenied => CleanError::PermissionDenied(path.to_path_buf()),
+            _ => CleanError::IoError(error),
+        }
+    }
+
     fn delete_file(&self, path: &Path, _expected_size: u64) -> Result<u64, CleanError> {
+        Self::ensure_present(path)?;
+
         let audit = self.security.audit_for_deletion(path);
         if !audit.is_safe {
             let violation = audit
@@ -268,25 +300,23 @@ impl Cleaner {
             return Err(CleanError::SecurityViolation(violation));
         }
 
-        let metadata = self
-            .security
-            .verify_before_deletion(path)
-            .map_err(|e| CleanError::SecurityViolation(e.to_string()))?;
+        let metadata = self.security.verify_before_deletion(path).map_err(|e| {
+            // The entry may have vanished after the presence check above.
+            Self::ensure_present(path)
+                .err()
+                .unwrap_or_else(|| CleanError::SecurityViolation(e.to_string()))
+        })?;
 
         let actual_size = metadata.len();
 
-        fs::remove_file(path).map_err(|e| {
-            if e.kind() == std::io::ErrorKind::PermissionDenied {
-                CleanError::PermissionDenied(path.to_path_buf())
-            } else {
-                CleanError::IoError(e)
-            }
-        })?;
+        fs::remove_file(path).map_err(|e| Self::removal_error(path, e))?;
 
         Ok(actual_size)
     }
 
     fn delete_directory(&self, path: &Path) -> Result<(), CleanError> {
+        Self::ensure_present(path)?;
+
         let audit = self.security.audit_for_deletion(path);
         if !audit.is_safe {
             let violation = audit
@@ -298,9 +328,12 @@ impl Cleaner {
             return Err(CleanError::SecurityViolation(violation));
         }
 
-        self.security
-            .verify_before_deletion(path)
-            .map_err(|e| CleanError::SecurityViolation(e.to_string()))?;
+        self.security.verify_before_deletion(path).map_err(|e| {
+            // The entry may have vanished after the presence check above.
+            Self::ensure_present(path)
+                .err()
+                .unwrap_or_else(|| CleanError::SecurityViolation(e.to_string()))
+        })?;
 
         let is_empty = path
             .read_dir()
@@ -311,13 +344,7 @@ impl Cleaner {
             return Err(CleanError::DirectoryNotEmpty(path.to_path_buf()));
         }
 
-        fs::remove_dir(path).map_err(|e| {
-            if e.kind() == std::io::ErrorKind::PermissionDenied {
-                CleanError::PermissionDenied(path.to_path_buf())
-            } else {
-                CleanError::IoError(e)
-            }
-        })?;
+        fs::remove_dir(path).map_err(|e| Self::removal_error(path, e))?;
 
         Ok(())
     }
@@ -395,6 +422,57 @@ mod tests {
         let result = cleaner.clean(&scan);
 
         assert!(result.cancelled);
+    }
+
+    #[test]
+    fn files_removed_after_the_scan_are_skipped_not_failed() {
+        let dir = setup_test_dir();
+        let cleaner = Cleaner::new();
+
+        let mut scan = ScanResult::new();
+        let vanished = dir.path().join("test1.txt");
+        scan.add_file(FileEntry::new(vanished.clone(), 14, false, false));
+        scan.add_file(FileEntry::new(
+            dir.path().join("test2.log"),
+            21,
+            false,
+            false,
+        ));
+        fs::remove_file(&vanished).unwrap();
+
+        let result = cleaner.clean(&scan);
+        assert!(
+            result.failed.is_empty(),
+            "unexpected failures: {:?}",
+            result.failed
+        );
+        assert_eq!(result.files_deleted_count(), 1);
+        assert_eq!(result.skipped.len(), 1);
+        assert_eq!(result.skipped[0].0, vanished);
+        assert_eq!(result.skipped[0].1, ALREADY_REMOVED_REASON);
+    }
+
+    #[test]
+    fn directories_removed_after_the_scan_are_skipped_not_failed() {
+        let dir = setup_test_dir();
+        let cleaner = Cleaner::new();
+
+        let gone = dir.path().join("gone");
+        fs::create_dir(&gone).unwrap();
+        let mut scan = ScanResult::new();
+        scan.add_directory(FileEntry::new(gone.clone(), 0, true, false));
+        fs::remove_dir(&gone).unwrap();
+
+        let result = cleaner.clean(&scan);
+        assert!(
+            result.failed.is_empty(),
+            "unexpected failures: {:?}",
+            result.failed
+        );
+        assert_eq!(
+            result.skipped,
+            vec![(gone, ALREADY_REMOVED_REASON.to_string())]
+        );
     }
 
     #[test]

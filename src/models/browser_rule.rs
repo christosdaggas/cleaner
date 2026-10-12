@@ -119,20 +119,61 @@ impl BrowserType {
         }
     }
 
-    pub fn cache_path(&self) -> Option<PathBuf> {
-        let cache = dirs::cache_dir()?;
+    /// Directory name the browser uses under an XDG cache or config home.
+    /// Chromium-based browsers use the same name in both places.
+    fn data_dir_name(&self) -> &'static str {
+        match self {
+            Self::Firefox => "mozilla/firefox",
+            Self::Chrome => "google-chrome",
+            Self::Chromium => "chromium",
+            Self::Brave => "BraveSoftware/Brave-Browser",
+            Self::Edge => "microsoft-edge",
+            Self::Opera => "opera",
+            Self::Vivaldi => "vivaldi",
+            Self::Yandex => "yandex-browser",
+            Self::DuckDuckGo => "duckduckgo",
+        }
+    }
 
-        Some(match self {
-            Self::Firefox => cache.join("mozilla/firefox"),
-            Self::Chrome => cache.join("google-chrome"),
-            Self::Chromium => cache.join("chromium"),
-            Self::Brave => cache.join("BraveSoftware/Brave-Browser"),
-            Self::Edge => cache.join("microsoft-edge"),
-            Self::Opera => cache.join("opera"),
-            Self::Vivaldi => cache.join("vivaldi"),
-            Self::Yandex => cache.join("yandex-browser"),
-            Self::DuckDuckGo => cache.join("duckduckgo"),
-        })
+    /// Flatpak application ID. Flatpak apps keep their data under
+    /// `~/.var/app/<id>/` instead of the host XDG directories.
+    fn flatpak_id(&self) -> &'static str {
+        match self {
+            Self::Firefox => "org.mozilla.firefox",
+            Self::Chrome => "com.google.Chrome",
+            Self::Chromium => "org.chromium.Chromium",
+            Self::Brave => "com.brave.Browser",
+            Self::Edge => "com.microsoft.Edge",
+            Self::Opera => "com.opera.Opera",
+            Self::Vivaldi => "com.vivaldi.Vivaldi",
+            Self::Yandex => "ru.yandex.Browser",
+            Self::DuckDuckGo => "com.duckduckgo.DesktopBrowser",
+        }
+    }
+
+    /// Every location that can hold this browser's cache: the native XDG
+    /// cache, the Flatpak sandbox cache, and the Snap cache where one exists.
+    /// The native location is always first.
+    pub fn cache_roots(&self) -> Vec<PathBuf> {
+        let name = self.data_dir_name();
+        let mut roots = Vec::new();
+        if let Some(cache) = dirs::cache_dir() {
+            roots.push(cache.join(name));
+        }
+        if let Some(home) = dirs::home_dir() {
+            roots.push(
+                home.join(".var/app")
+                    .join(self.flatpak_id())
+                    .join("cache")
+                    .join(name),
+            );
+            match self {
+                Self::Firefox => roots.push(home.join("snap/firefox/common/.cache").join(name)),
+                Self::Chromium => roots.push(home.join("snap/chromium/common/.cache").join(name)),
+                _ => {}
+            }
+        }
+        roots
     }
 
     pub fn is_installed(&self) -> bool {
@@ -193,21 +234,33 @@ impl BrowserType {
         })
     }
 
-    pub fn config_path(&self) -> Option<PathBuf> {
-        let home = dirs::home_dir()?;
-        let config = dirs::config_dir()?;
+    /// Every location that can hold this browser's profiles: native, Flatpak,
+    /// and Snap where one exists. The native location is always first.
+    pub fn config_roots(&self) -> Vec<PathBuf> {
+        let Some(home) = dirs::home_dir() else {
+            return Vec::new();
+        };
+        let flatpak = home.join(".var/app").join(self.flatpak_id());
 
-        Some(match self {
-            Self::Firefox => home.join(".mozilla/firefox"),
-            Self::Chrome => config.join("google-chrome"),
-            Self::Chromium => config.join("chromium"),
-            Self::Brave => config.join("BraveSoftware/Brave-Browser"),
-            Self::Edge => config.join("microsoft-edge"),
-            Self::Opera => config.join("opera"),
-            Self::Vivaldi => config.join("vivaldi"),
-            Self::Yandex => config.join("yandex-browser"),
-            Self::DuckDuckGo => config.join("duckduckgo"),
-        })
+        match self {
+            Self::Firefox => vec![
+                home.join(".mozilla/firefox"),
+                flatpak.join(".mozilla/firefox"),
+                home.join("snap/firefox/common/.mozilla/firefox"),
+            ],
+            _ => {
+                let name = self.data_dir_name();
+                let mut roots = Vec::new();
+                if let Some(config) = dirs::config_dir() {
+                    roots.push(config.join(name));
+                }
+                roots.push(flatpak.join("config").join(name));
+                if *self == Self::Chromium {
+                    roots.push(home.join("snap/chromium/common/chromium"));
+                }
+                roots
+            }
+        }
     }
 
     pub fn all() -> &'static [BrowserType] {
@@ -227,7 +280,7 @@ impl BrowserType {
     /// Process names used to detect if this browser is currently running
     pub fn process_names(&self) -> &'static [&'static str] {
         match self {
-            Self::Firefox => &["firefox"],
+            Self::Firefox => &["firefox", "firefox-bin", "firefox-esr"],
             Self::Chrome => &["chrome"],
             Self::Chromium => &["chromium"],
             Self::Brave => &["brave"],
@@ -423,15 +476,17 @@ impl BrowserRule {
         }
     }
 
-    pub fn effective_path(&self) -> Option<PathBuf> {
-        if let Some(ref custom) = self.custom_path {
-            Some(custom.clone())
+    /// Every root this rule may scan. A custom path replaces the defaults;
+    /// otherwise the native, Flatpak, and Snap locations are all candidates,
+    /// with the native location first.
+    pub fn effective_paths(&self) -> Vec<PathBuf> {
+        if let Some(custom) = &self.custom_path {
+            return vec![custom.clone()];
+        }
+        if self.data_type == BrowserDataType::Cache {
+            self.browser.cache_roots()
         } else {
-            if matches!(self.data_type, BrowserDataType::Cache) {
-                self.browser.cache_path()
-            } else {
-                self.browser.config_path()
-            }
+            self.browser.config_roots()
         }
     }
 
@@ -454,5 +509,67 @@ impl BrowserRule {
             self.browser.display_name(),
             self.data_type.display_name()
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_browser_includes_its_flatpak_locations() {
+        let home = dirs::home_dir().expect("tests need a home directory");
+        for browser in BrowserType::all() {
+            let sandbox = home.join(".var/app").join(browser.flatpak_id());
+            assert!(
+                browser
+                    .cache_roots()
+                    .iter()
+                    .any(|root| root.starts_with(sandbox.join("cache"))),
+                "{browser:?} is missing its Flatpak cache root"
+            );
+            assert!(
+                browser
+                    .config_roots()
+                    .iter()
+                    .any(|root| root.starts_with(&sandbox)),
+                "{browser:?} is missing its Flatpak profile root"
+            );
+        }
+    }
+
+    #[test]
+    fn native_locations_stay_first() {
+        let home = dirs::home_dir().expect("tests need a home directory");
+        assert_eq!(
+            BrowserType::Firefox.config_roots()[0],
+            home.join(".mozilla/firefox")
+        );
+        let cache = dirs::cache_dir().expect("tests need a cache directory");
+        assert_eq!(
+            BrowserType::Chrome.cache_roots()[0],
+            cache.join("google-chrome")
+        );
+    }
+
+    #[test]
+    fn snap_locations_are_known_for_firefox_and_chromium() {
+        let home = dirs::home_dir().expect("tests need a home directory");
+        assert!(BrowserType::Firefox
+            .config_roots()
+            .contains(&home.join("snap/firefox/common/.mozilla/firefox")));
+        assert!(BrowserType::Chromium
+            .config_roots()
+            .contains(&home.join("snap/chromium/common/chromium")));
+    }
+
+    #[test]
+    fn a_custom_path_replaces_every_default_location() {
+        let mut rule = BrowserRule::new(BrowserType::Chrome, BrowserDataType::Cookies);
+        rule.custom_path = Some(PathBuf::from("/srv/profiles/chrome"));
+        assert_eq!(
+            rule.effective_paths(),
+            vec![PathBuf::from("/srv/profiles/chrome")]
+        );
     }
 }

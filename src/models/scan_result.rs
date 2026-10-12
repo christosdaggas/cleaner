@@ -112,6 +112,9 @@ pub enum CleanError {
 
     #[error("Directory not empty: {0}")]
     DirectoryNotEmpty(PathBuf),
+
+    #[error("Already removed: {0}")]
+    AlreadyRemoved(PathBuf),
 }
 
 #[derive(Debug, Clone, Default)]

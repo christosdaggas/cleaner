@@ -77,13 +77,17 @@ impl Scanner {
                     return result;
                 }
 
+                let candidates = rule.effective_paths();
+                let Some(primary) = candidates.first().cloned() else {
+                    result.add_error(format!("No path for browser rule: {}", rule.display_name()));
+                    return result;
+                };
+
                 if rule.custom_path.is_none() && !installed_browsers.contains(&rule.browser) {
-                    if let Some(path) = rule.effective_path() {
-                        result.add_skipped(
-                            path,
-                            format!("{} is not installed", rule.browser.display_name()),
-                        );
-                    }
+                    result.add_skipped(
+                        primary,
+                        format!("{} is not installed", rule.browser.display_name()),
+                    );
                     return result;
                 }
 
@@ -91,16 +95,14 @@ impl Scanner {
                 if rule.data_type != BrowserDataType::Cache
                     && running_browsers.contains(&rule.browser)
                 {
-                    if let Some(path) = rule.effective_path() {
-                        result.add_skipped(
-                            path,
-                            format!(
-                                "{} is currently running \u{2014} close it before cleaning {} to avoid data corruption",
-                                rule.browser.display_name(),
-                                rule.data_type.display_name()
-                            ),
-                        );
-                    }
+                    result.add_skipped(
+                        primary,
+                        format!(
+                            "{} is currently running \u{2014} close it before cleaning {} to avoid data corruption",
+                            rule.browser.display_name(),
+                            rule.data_type.display_name()
+                        ),
+                    );
                     return result;
                 }
 
@@ -109,22 +111,16 @@ impl Scanner {
                     return result;
                 }
 
-                let Some(path) = rule.effective_path() else {
-                    result.add_error(format!(
-                        "No path for browser rule: {}",
-                        rule.display_name()
-                    ));
-                    return result;
-                };
-
-                for relative_path in rule.data_type.relative_paths(rule.browser) {
-                    let pattern = path.join(relative_path);
-                    result.merge(
-                        self.scan_browser_pattern(
-                            &pattern,
-                            rule.data_type.recurse_directories(),
-                        ),
-                    );
+                for root in Self::browser_scan_roots(candidates) {
+                    for relative_path in rule.data_type.relative_paths(rule.browser) {
+                        let pattern = root.join(relative_path);
+                        result.merge(
+                            self.scan_browser_pattern(
+                                &pattern,
+                                rule.data_type.recurse_directories(),
+                            ),
+                        );
+                    }
                 }
                 result
             })
@@ -151,6 +147,23 @@ impl Scanner {
         }
         result.cancelled |= self.is_cancelled();
         result
+    }
+
+    /// Pick which browser roots to scan. Only roots that exist are scanned,
+    /// so a native install does not report missing Flatpak or Snap folders.
+    /// When none exist, the first (native or custom) root is kept so the
+    /// result still explains that the path does not exist.
+    fn browser_scan_roots(candidates: Vec<PathBuf>) -> Vec<PathBuf> {
+        let existing: Vec<PathBuf> = candidates
+            .iter()
+            .filter(|root| root.is_dir())
+            .cloned()
+            .collect();
+        if existing.is_empty() {
+            candidates.into_iter().take(1).collect()
+        } else {
+            existing
+        }
     }
 
     fn unsupported_browser_cleanup_reason(
@@ -1239,6 +1252,27 @@ mod tests {
         // Invalid patterns never match anything.
         assert!(scanner.find_matching_subdirectories(&root, "..").is_empty());
         assert!(scanner.find_matching_subdirectories(&root, "  ").is_empty());
+    }
+
+    #[test]
+    fn browser_scan_covers_every_existing_install_root() {
+        let dir = TempDir::new().unwrap();
+        let native = dir.path().join("native");
+        let flatpak = dir.path().join("flatpak");
+        let snap = dir.path().join("snap");
+        fs::create_dir_all(&native).unwrap();
+        fs::create_dir_all(&flatpak).unwrap();
+
+        let roots = Scanner::browser_scan_roots(vec![native.clone(), flatpak.clone(), snap]);
+        assert_eq!(roots, vec![native, flatpak]);
+    }
+
+    #[test]
+    fn browser_scan_keeps_the_first_root_when_none_exist() {
+        let dir = TempDir::new().unwrap();
+        let native = dir.path().join("native");
+        let roots = Scanner::browser_scan_roots(vec![native.clone(), dir.path().join("flatpak")]);
+        assert_eq!(roots, vec![native]);
     }
 
     #[test]
